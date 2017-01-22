@@ -42,7 +42,7 @@ func main(){
     log.Fatal(err);
   }
 
-  err, quorum := seed_node.HasQuorum()
+  quorum, err := seed_node.HasQuorum()
 
   if( err != nil ){
     log.Fatal(err);

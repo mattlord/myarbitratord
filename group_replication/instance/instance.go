@@ -26,9 +26,13 @@ type instance struct {
   mysql_user string
   mysql_pass string
 
+  // The status related vars can serve as an effective cache 
   group_name string
+  server_id string
+  member_state string
   group_status string 
   has_quorum bool
+  read_only bool
   applier_queue_size uint16
 }
 
@@ -47,7 +51,7 @@ func (me *instance) Connect() error {
     if( err == nil ){
       //defer db.Close()
 
-      err = db.QueryRow( "select variable_value from global_variables where variable_name='group_replication_group_name'" ).Scan( &me.group_name )
+      err = db.QueryRow( "SELECT variable_value FROM global_variables WHERE variable_name='group_replication_group_name'" ).Scan( &me.group_name )
 
       if( err != nil || me.group_name == "" ){
         err = errors.New( "Specified MySQL instance is not a member of any Group Replication cluster!" )
@@ -58,11 +62,45 @@ func (me *instance) Connect() error {
   return err
 }
 
-func (me *instance) HasQuorum() (error, bool) {
-  quorum_query := "SELECT IF( MEMBER_STATE='ONLINE' AND ((SELECT COUNT(*) FROM performance_schema.replication_group_members WHERE MEMBER_STATE != 'ONLINE') >= ((SELECT COUNT(*) FROM performance_schema.replication_group_members)/2) = 0), 'true', 'false' ) FROM performance_schema.replication_group_members JOIN performance_schema.replication_group_member_stats USING(member_id)"
+func (me *instance) HasQuorum() (bool, error) {
+  quorum_query := "SELECT IF( MEMBER_STATE='ONLINE' AND ((SELECT COUNT(*) FROM replication_group_members WHERE MEMBER_STATE != 'ONLINE') >= ((SELECT COUNT(*) FROM replication_group_members)/2) = 0), 'true', 'false' ) FROM replication_group_members JOIN replication_group_member_stats USING(member_id)"
 
   err := db.QueryRow( quorum_query ).Scan( &me.has_quorum )
  
-  return err, me.has_quorum
+  return me.has_quorum, err
+}
+
+func (me *instance) IsReadOnly() (bool, error) {
+  ro_query := "SELECT variable_value FROM global_variables WHERE variable_name='super_read_only'"
+  err := db.QueryRow( ro_query ).Scan( &me.read_only )
+
+  return me.read_only, err
+}
+
+func (me *instance) Members() (*[]instance, error) {
+  membership_query := "SELECT member_id, member_host, member_port, member_state FROM replication_group_members"
+  member_slice := []instance{}
+
+  rows, err := db.Query( membership_query )
+
+  if( err == nil ){
+    defer rows.Close()
+
+    for( rows.Next() ){
+      member := New( "", "", "", "")
+      err = rows.Scan( member.server_id, member.mysql_host, member.mysql_port, member.member_state )
+      member_slice = append( member_slice, *member )
+    }
+  }
+
+  return &member_slice, err 
+}
+
+func (me *instance) Shutdown() error {
+  shutdown_query := "SHUTDOWN SERVER"
+
+  _, err := db.Exec( shutdown_query )
+
+  return err
 }
 
