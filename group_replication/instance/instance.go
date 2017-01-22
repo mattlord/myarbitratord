@@ -97,7 +97,7 @@ func (me *instance) Members() (*[]instance, error) {
 }
 
 func (me *instance) Shutdown() error {
-  shutdown_query := "SHUTDOWN SERVER"
+  shutdown_query := "SHUTDOWN"
 
   _, err := db.Exec( shutdown_query )
 
