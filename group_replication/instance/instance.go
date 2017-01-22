@@ -20,8 +20,8 @@ import (
   "errors"
 )
 
-// member variabls that start with capital letters are public/exported 
-type instance struct {
+// member variables that start with capital letters are public/exported 
+type Instance struct {
   Mysql_host string 
   Mysql_port string
   Mysql_user string
@@ -29,9 +29,8 @@ type instance struct {
 
   // The status related vars can serve as an effective cache 
   Group_name string
-  Server_id string
+  Server_uuid string
   Member_state string
-  Group_status string 
   Has_quorum bool
   Read_only bool
   Applier_queue_size uint16
@@ -39,11 +38,11 @@ type instance struct {
 
 var db *sql.DB
 
-func New( myh string, myp string, myu string, mys string ) * instance {
-  return &instance{ Mysql_host: myh, Mysql_port: myp, Mysql_user: myu, mysql_pass: mys }
+func New( myh string, myp string, myu string, mys string ) * Instance {
+  return &Instance{ Mysql_host: myh, Mysql_port: myp, Mysql_user: myu, mysql_pass: mys }
 }
 
-func (me *instance) Connect() error {
+func (me *Instance) Connect() error {
   var err error 
   db, err = sql.Open("mysql", me.Mysql_user + ":" + me.mysql_pass + "@tcp(" + me.Mysql_host + ":" + me.Mysql_port + ")/performance_schema")
 
@@ -52,18 +51,20 @@ func (me *instance) Connect() error {
     if( err == nil ){
       //defer db.Close()
 
-      err = db.QueryRow( "SELECT variable_value FROM global_variables WHERE variable_name='group_replication_Group_name'" ).Scan( &me.Group_name )
+      err = db.QueryRow( "SELECT variable_value FROM global_variables WHERE variable_name='group_replication_group_name'" ).Scan( &me.Group_name )
 
       if( err != nil || me.Group_name == "" ){
-        err = errors.New( "Specified MySQL instance is not a member of any Group Replication cluster!" )
+        err = errors.New( "Specified MySQL Instance is not a member of any Group Replication cluster!" )
       }
+
+      err = db.QueryRow( "SELECT variable_value, member_state FROM global_variables gv INNER JOIN replication_group_members rgm ON(gv.variable_value=rgm.member_state) WHERE gv.variable_name='server_uuid'" ).Scan( &me.Server_uuid, &me.Member_state )
     }
   }
   
   return err
 }
 
-func (me *instance) HasQuorum() (bool, error) {
+func (me *Instance) HasQuorum() (bool, error) {
   quorum_query := "SELECT IF( MEMBER_STATE='ONLINE' AND ((SELECT COUNT(*) FROM replication_group_members WHERE MEMBER_STATE != 'ONLINE') >= ((SELECT COUNT(*) FROM replication_group_members)/2) = 0), 'true', 'false' ) FROM replication_group_members JOIN replication_group_member_stats USING(member_id)"
 
   err := db.QueryRow( quorum_query ).Scan( &me.Has_quorum )
@@ -71,16 +72,16 @@ func (me *instance) HasQuorum() (bool, error) {
   return me.Has_quorum, err
 }
 
-func (me *instance) IsReadOnly() (bool, error) {
-  ro_query := "SELECT variable_value FROM global_variables WHERE variable_name='super_Read_only'"
+func (me *Instance) IsReadOnly() (bool, error) {
+  ro_query := "SELECT variable_value FROM global_variables WHERE variable_name='super_read_only'"
   err := db.QueryRow( ro_query ).Scan( &me.Read_only )
 
   return me.Read_only, err
 }
 
-func (me *instance) GetMembers() (*[]instance, error) {
+func (me *Instance) GetMembers() (*[]Instance, error) {
   membership_query := "SELECT member_id, member_host, member_port, member_state FROM replication_group_members"
-  member_slice := []instance{}
+  member_slice := []Instance{}
 
   rows, err := db.Query( membership_query )
 
@@ -89,7 +90,7 @@ func (me *instance) GetMembers() (*[]instance, error) {
 
     for( rows.Next() ){
       member := New( "", "", "", "")
-      err = rows.Scan( member.Server_id, member.Mysql_host, member.Mysql_port, member.Member_state )
+      err = rows.Scan( member.Server_uuid, member.Mysql_host, member.Mysql_port, member.Member_state )
       member_slice = append( member_slice, *member )
     }
   }
@@ -97,7 +98,7 @@ func (me *instance) GetMembers() (*[]instance, error) {
   return &member_slice, err 
 }
 
-func (me *instance) Shutdown() error {
+func (me *Instance) Shutdown() error {
   shutdown_query := "SHUTDOWN"
 
   _, err := db.Exec( shutdown_query )
