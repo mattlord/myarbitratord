@@ -39,20 +39,49 @@ func main(){
   err := seed_node.Connect()
 
   if( err != nil ){
-    log.Fatal(err);
+    log.Fatal( err );
   }
 
   quorum, err := seed_node.HasQuorum()
 
   if( err != nil ){
-    log.Fatal(err);
+    log.Fatal( err );
   }
 
   fmt.Printf( "Does the seed node have a write quorum? %v\n", quorum ) 
 
+  members, err := seed_node.GetMembers()
+
   if( quorum ){
-    // spawn 1+ threads to monitor the group and do arbitration 
+    // Let's try and shutdown the nodes NOT in the primary partition if we can reach them from the arbitrator 
+
+    if( err != nil ){
+      log.Fatal( err );
+    }
+
+    for _, member := range *members{
+      if( member.Member_state == "ERROR" || member.Member_state == "UNREACHABLE" ){
+        err = member.Shutdown()
+       
+        if( err != nil ){
+          fmt.Println( "Could not shutdown instance: ", member.Mysql_host, member.Mysql_port )
+        }
+      } 
+    }
+  } else {
+    // Let's shutdown the seed instance 
+    err = seed_node.Shutdown()
+       
+    if( err != nil ){
+      fmt.Println( "Could not shutdown instance: ", seed_node.Mysql_host, seed_node.Mysql_port )
+    }
   }
+
+  // handling a split brain scenario will be much trickier... I'll need to try and contact each member in
+  // the last seen view and try to determine which partition should become the primary one we'll then need
+  // to contact 1 node in the primary partition and explicitly set the new membership with
+  // 'set global group_replication_force_members="<node_list>"'
+  // and finally we'll need to try and connect to the nodes on the losing side of the partition and attempt to shutdown mysqld 
 
   os.Exit(0);
 }
