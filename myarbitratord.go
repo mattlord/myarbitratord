@@ -18,13 +18,13 @@ import (
   "os"
   "fmt"
   "log"
-  "github.com/mattlord/myarbitratord/group_replication/instance"
+  "github.com/mattlord/myarbitratord/group_replication/instances"
   "time"
 // "flag"
   "sort"
 )
 
-type MembersByOnlineNodes []instance.Instance
+type MembersByOnlineNodes []instances.Instance
 
 func main(){
   if( len(os.Args) < 3 ){
@@ -34,6 +34,8 @@ func main(){
 
   seed_host := os.Args[1]
   seed_port := os.Args[2]
+
+  // Currently these credentials should work on any participating MySQL instance 
   mysql_user := "root"
   mysql_pass := "!root19M"
 
@@ -43,7 +45,7 @@ func main(){
 
   fmt.Printf( "Starting operations from seed node: '%s:%s'\n", seed_host, seed_port )
 
-  seed_node := instance.New( seed_host, seed_port, mysql_user, mysql_pass )
+  seed_node := instances.New( seed_host, seed_port, mysql_user, mysql_pass )
   err := MonitorCluster( seed_node )
   
   if( err != nil ){
@@ -55,10 +57,10 @@ func main(){
 }
 
 
-func MonitorCluster( seed_node *instance.Instance ) error {
+func MonitorCluster( seed_node *instances.Instance ) error {
   loop := true
   var err error
-  last_view := []instance.Instance{}
+  last_view := []instances.Instance{}
   
   for( loop == true ){
     // let's check the status of the current seed node
