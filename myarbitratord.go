@@ -18,10 +18,13 @@ import (
   "os"
   "fmt"
   "log"
- "github.com/mattlord/myarbitratord/group_replication/instance"
+  "github.com/mattlord/myarbitratord/group_replication/instance"
   "time"
 // "flag"
+  "sort"
 )
+
+type MembersByOnlineNodes []instance.Instance
 
 func main(){
   if( len(os.Args) < 3 ){
@@ -58,8 +61,6 @@ func MonitorCluster( seed_node *instance.Instance ) error {
   last_view := []instance.Instance{}
   
   for( loop == true ){
-    //primary_partition := false
-
     // let's check the status of the current seed node
     // if the seed node 
     err := seed_node.Connect()
@@ -96,10 +97,6 @@ func MonitorCluster( seed_node *instance.Instance ) error {
     if( quorum ){
       // Let's try and shutdown the nodes NOT in the primary partition if we can reach them from the arbitrator 
 
-      if( err != nil ){
-        log.Fatal( err );
-      }
-
       for _, member := range *members {
         if( member.Member_state == "ERROR" || member.Member_state == "UNREACHABLE" ){
           fmt.Println( "Shutting down non-healthy node: ", member.Mysql_host, ":", member.Mysql_port )
@@ -111,11 +108,45 @@ func MonitorCluster( seed_node *instance.Instance ) error {
         } 
       }
     } else {
-      // handling network partitions and split brain scenarios will be much trickier... I'll need to try and contact each member in
-      // the last seen view and try to determine which partition should become the primary one we'll then need
-      // to contact 1 node in the primary partition and explicitly set the new membership with
-      // 'set global group_replication_force_members="<node_list>"'
-      // and finally we'll need to try and connect to the nodes on the losing side of the partition and attempt to shutdown mysqld 
+      // handling network partitions and split brain scenarios will be much trickier... I'll need to try and
+      // contact each member in the last seen view and try to determine which partition should become the
+      // primary one we'll then need to contact 1 node in the primary partition and explicitly set the new
+      // membership with 'set global group_replication_force_members="<node_list>"' and finally we'll need
+      // to try and connect to the nodes on the losing side of the partition and attempt to shutdown mysqld 
+
+      // does anyone have a quorum? Let's double check before forcing the membership 
+      primary_partition := false
+      for _, member := range last_view {
+        member.Connect()    
+        quorum, err := member.HasQuorum()
+        if( err == nil && quorum ){
+          seed_node = &member
+          primary_partition = true
+          break
+        }
+      }
+
+      // If noone in fact has a quorum, then let's see which partition has the most
+      // online/participating/communicating members; the participants in that partition
+      // will then be the ones that we use to force the new membership and unlock the cluster
+      if( primary_partition == false ){
+        sort.Sort( MembersByOnlineNodes(last_view) )
+        // now the last element in the array is the one to use as it's coordinating with the most nodes 
+        seed_node = &last_view[len(last_view)-1]
+
+        // let's build a string of '<host>:<port>' combinations that we want to use for the new membership view
+        members, _ := seed_node.GetMembers()
+        force_member_string := ""
+        for _, member := range *members {
+          if( member.Member_state == "ONLINE" ){
+            force_member_string = force_member_string + member.Mysql_host + ":" + member.Mysql_port
+          }
+        }
+
+        fmt.Println( "Forcing group membership! using: '", force_member_string, "'" )
+
+        err = seed_node.ForceMembers( force_member_string ) 
+      }
     }
     
     if( err != nil ){
@@ -126,4 +157,19 @@ func MonitorCluster( seed_node *instance.Instance ) error {
   }
 
   return err
+}
+
+
+// The remaining functions are used to sort our membership slice
+func (a MembersByOnlineNodes) Len() int {
+  return len(a)
+}
+
+func (a MembersByOnlineNodes) Swap( i, j int ) {
+  a[i], a[j] = a[j], a[i]
+}
+
+func (a MembersByOnlineNodes) Less( i, j int ) bool {
+
+  return a[i].Online_participants < a[j].Online_participants
 }
