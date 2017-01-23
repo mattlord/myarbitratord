@@ -139,8 +139,11 @@ func MonitorCluster( seed_node *instances.Instance ) error {
         // let's build a string of '<host>:<port>' combinations that we want to use for the new membership view
         members, _ := seed_node.GetMembers()
         force_member_string := ""
-        for _, member := range *members {
+        for i, member := range *members {
           if( member.Member_state == "ONLINE" ){
+            if( i != 0 ){
+              force_member_string = force_member_string + ","
+            }
             force_member_string = force_member_string + member.Mysql_host + ":" + member.Mysql_port
           }
         }
