@@ -144,7 +144,6 @@ func MonitorCluster( seed_node *instance.Instance ) error {
         }
 
         fmt.Println( "Forcing group membership! using: '", force_member_string, "'" )
-
         err = seed_node.ForceMembers( force_member_string ) 
       }
     }
@@ -170,6 +169,5 @@ func (a MembersByOnlineNodes) Swap( i, j int ) {
 }
 
 func (a MembersByOnlineNodes) Less( i, j int ) bool {
-
   return a[i].Online_participants < a[j].Online_participants
 }
