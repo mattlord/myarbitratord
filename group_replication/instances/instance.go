@@ -75,6 +75,7 @@ func (me *Instance) HasQuorum() (bool, error) {
 
 func (me *Instance) IsReadOnly() (bool, error) {
   ro_query := "SELECT variable_value FROM global_variables WHERE variable_name='super_read_only'"
+
   err := me.db.QueryRow( ro_query ).Scan( &me.Read_only )
 
   return me.Read_only, err
@@ -112,9 +113,10 @@ func (me *Instance) Shutdown() error {
 }
 
 func (me *Instance) TransactionsExecuted() (string, error) {
-  gtid_query := "SELECT @@global.GTID_EXECUTED"
   // since this is such a fast changing metric, I won't cache the value in the struct
   var gtids string
+  gtid_query := "SELECT @@global.GTID_EXECUTED"
+
   err := me.db.QueryRow( gtid_query ).Scan( &gtids )
 
   return gtids, err
