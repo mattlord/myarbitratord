@@ -111,6 +111,15 @@ func (me *Instance) Shutdown() error {
   return err
 }
 
+func (me *Instance) TransactionsExecuted() (string, error) {
+  gtid_query := "SELECT @@global.GTID_EXECUTED"
+  // since this is such a fast changing metric, I won't cache the value in the struct
+  var gtids string
+  err := me.db.QueryRow( gtid_query ).Scan( &gtids )
+
+  return gtids, err
+}
+
 func (me *Instance) ForceMembers( fms string ) error {
   force_membership_query := "SET GLOBAL group_replication_force_members='" + fms + "'"
 

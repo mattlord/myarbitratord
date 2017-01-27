@@ -72,7 +72,7 @@ func MonitorCluster( seed_node *instances.Instance ) error {
       // let's try and get a new seed node from the last known membership view 
       for _, member := range last_view {
         member.Connect()
-        if( err == nil && member.Member_state == "ONLINE"){
+        if( err == nil && member.Member_state == "ONLINE" ){
           seed_node = &member
           fmt.Println( "Updated seed node! New seed node is: ", seed_node.Mysql_host, ":", seed_node.Mysql_port ) 
           break
@@ -131,6 +131,7 @@ func MonitorCluster( seed_node *instances.Instance ) error {
       // If noone in fact has a quorum, then let's see which partition has the most
       // online/participating/communicating members; the participants in that partition
       // will then be the ones that we use to force the new membership and unlock the cluster
+      // ToDo: should we consider GTID_EXECUTED sets when choosing a partition???
       if( primary_partition == false ){
         sort.Sort( MembersByOnlineNodes(last_view) )
         // now the last element in the array is the one to use as it's coordinating with the most nodes 
