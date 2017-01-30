@@ -20,7 +20,7 @@ import (
   "log"
   "github.com/mattlord/myarbitratord/group_replication/instances"
   "time"
-// "flag"
+  "flag"
   "sort"
 )
 
@@ -28,27 +28,32 @@ type MembersByOnlineNodes []instances.Instance
 var debug = false
 
 func main(){
-  if( len(os.Args) < 3 ){
-    fmt.Println( "myarbitratord usage: myarbitratord <seed_host> <seed_port> [true] (enable debug logging)" )
+  var seed_host string 
+  var seed_port string 
+  var debug_mode bool 
+  var mysql_user string
+  var mysql_pass string
+
+  flag.StringVar( &seed_host, "seed_host", "", "IP/Hostname of the seed node used to start monitoring the Group Replication cluster" )
+  flag.StringVar( &seed_port, "seed_port", "3306", "Port of the seed node used to start monitoring the Group Replication cluster" )
+  flag.BoolVar( &debug_mode, "debug", false, "Execute in debug mode with all debug logging enabled" )
+  flag.StringVar( &mysql_user, "mysql_user", "root", "The mysql user account to be used when connecting to any node in the cluster" )
+  flag.StringVar( &mysql_pass, "mysql_pass", "", "The mysql user account password to be used when connecting to any node in the cluster" )
+
+  flag.Parse()
+
+  // ToDo: I need to handle the password on the command-line more securely
+  //       I need to do some data masking for the processlist 
+
+  // A host is required, the default port of 3306 will then be attempted 
+  if( seed_host == "" ){
+    fmt.Println( "myarbitratord usage: myarbitratord -seed_host=<seed_host> [-seed_port=<seed_port>] [-mysql_user=<mysql_user>] [-mysql_pass=<mysql_pass>] [-debug=true]" )
     os.Exit(1);
   }
 
-  seed_host := os.Args[1]
-  seed_port := os.Args[2]
-  if( len(os.Args) > 3 ){ 
-    debug_mode := os.Args[3]
-
-    if( debug_mode == "true" ){
-      instances.Debug = true
-      debug = true
-    }
+  if( debug_mode ){
+    instances.Debug = true
   }
-
-  // Currently these credentials should work on any participating MySQL instance 
-  mysql_user := "root"
-  mysql_pass := "!root19M"
-
-  // check out flag.String( "foo" ) for option handling ... 
 
   fmt.Println( "Welcome to the MySQL Group Replication Arbitrator!" )
 
