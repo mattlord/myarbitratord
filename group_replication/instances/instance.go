@@ -18,6 +18,7 @@ import (
   "database/sql"
   _ "github.com/go-sql-driver/mysql"
   "errors"
+  "fmt"
 )
 
 // member variables that start with capital letters are public/exported 
@@ -36,7 +37,11 @@ type Instance struct {
   Read_only bool
   Applier_queue_size uint16
   db *sql.DB
+
 }
+
+// enable debug logging for all instances
+var Debug bool = false
 
 
 func New( myh string, myp string, myu string, mys string ) * Instance {
@@ -52,13 +57,23 @@ func (me *Instance) Connect() error {
     if( err == nil ){
       //defer me.db.Close()
 
-      err = me.db.QueryRow( "SELECT variable_value FROM global_variables WHERE variable_name='group_replication_group_name'" ).Scan( &me.Group_name )
+      query_str := "SELECT variable_value FROM global_variables WHERE variable_name='group_replication_group_name'"
+
+      if( Debug ){
+        fmt.Printf( "Checking group name on '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, query_str )
+      }
+      err = me.db.QueryRow( query_str ).Scan( &me.Group_name )
 
       if( err != nil || me.Group_name == "" ){
         err = errors.New( "Specified MySQL Instance is not a member of any Group Replication cluster!" )
       }
 
-      err = me.db.QueryRow( "SELECT variable_value, member_state FROM global_variables gv INNER JOIN replication_group_members rgm ON(gv.variable_value=rgm.member_state) WHERE gv.variable_name='server_uuid'" ).Scan( &me.Server_uuid, &me.Member_state )
+      query_str = "SELECT variable_value, member_state FROM global_variables gv INNER JOIN replication_group_members rgm ON(gv.variable_value=rgm.member_state) WHERE gv.variable_name='server_uuid'"
+
+      if( Debug ){
+        fmt.Printf( "Checking status of '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, query_str )
+      }
+      err = me.db.QueryRow( query_str ).Scan( &me.Server_uuid, &me.Member_state )
     }
   }
   
@@ -68,7 +83,15 @@ func (me *Instance) Connect() error {
 func (me *Instance) HasQuorum() (bool, error) {
   quorum_query := "SELECT IF( MEMBER_STATE='ONLINE' AND ((SELECT COUNT(*) FROM replication_group_members WHERE MEMBER_STATE != 'ONLINE') >= ((SELECT COUNT(*) FROM replication_group_members)/2) = 0), 'true', 'false' ) FROM replication_group_members JOIN replication_group_member_stats USING(member_id)"
 
-  err := me.db.QueryRow( quorum_query ).Scan( &me.Has_quorum )
+  if( Debug ){
+    fmt.Printf( "Checking if '%s:%s' has a quorum. Query: %s\n", me.Mysql_host, me.Mysql_port, quorum_query )
+  }
+
+  err := me.db.Ping()
+
+  if( err == nil ){
+    err = me.db.QueryRow( quorum_query ).Scan( &me.Has_quorum )
+  }
  
   return me.Has_quorum, err
 }
@@ -76,7 +99,15 @@ func (me *Instance) HasQuorum() (bool, error) {
 func (me *Instance) IsReadOnly() (bool, error) {
   ro_query := "SELECT variable_value FROM global_variables WHERE variable_name='super_read_only'"
 
-  err := me.db.QueryRow( ro_query ).Scan( &me.Read_only )
+  if( Debug ){
+    fmt.Printf( "Checking if '%s:%s' is read only. Query: %s\n", me.Mysql_host, me.Mysql_port, ro_query )
+  }
+
+  err := me.db.Ping()
+
+  if( err == nil ){
+    err = me.db.QueryRow( ro_query ).Scan( &me.Read_only )
+  }
 
   return me.Read_only, err
 }
@@ -86,18 +117,26 @@ func (me *Instance) GetMembers() (*[]Instance, error) {
   member_slice := []Instance{}
   Online_participants := 0
 
-  rows, err := me.db.Query( membership_query )
+  if( Debug ){
+    fmt.Printf( "Getting group members from '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, membership_query )
+  }
+
+  err := me.db.Ping()
 
   if( err == nil ){
-    defer rows.Close()
+    rows, err2 := me.db.Query( membership_query )
 
-    for( rows.Next() ){
-      member := New( "", "", "", "")
-      err = rows.Scan( member.Server_uuid, member.Mysql_host, member.Mysql_port, member.Member_state )
-      if( member.Member_state == "ONLINE" ){
-        Online_participants++ 
+    if( err2 == nil ){
+      defer rows.Close()
+
+      for( rows.Next() ){
+        member := New( "", "", "", "")
+        err = rows.Scan( &member.Server_uuid, &member.Mysql_host, &member.Mysql_port, &member.Member_state )
+        if( member.Member_state == "ONLINE" ){
+          Online_participants++ 
+        }
+        member_slice = append( member_slice, *member )
       }
-      member_slice = append( member_slice, *member )
     }
   }
 
@@ -107,7 +146,15 @@ func (me *Instance) GetMembers() (*[]Instance, error) {
 func (me *Instance) Shutdown() error {
   shutdown_query := "SHUTDOWN"
 
-  _, err := me.db.Exec( shutdown_query )
+  if( Debug ){
+    fmt.Printf( "Shutting down node '%s:%s'\n", me.Mysql_host, me.Mysql_port )
+  }
+
+  err := me.db.Ping()
+
+  if( err == nil ){
+    _, err = me.db.Exec( shutdown_query )
+  }
 
   return err
 }
@@ -117,7 +164,15 @@ func (me *Instance) TransactionsExecuted() (string, error) {
   var gtids string
   gtid_query := "SELECT @@global.GTID_EXECUTED"
 
-  err := me.db.QueryRow( gtid_query ).Scan( &gtids )
+  if( Debug ){
+    fmt.Printf( "Getting the transactions executed on '%s:%s'\n", me.Mysql_host, me.Mysql_port )
+  }
+
+  err := me.db.Ping()
+
+  if( err == nil ){
+    err = me.db.QueryRow( gtid_query ).Scan( &gtids )
+  }
 
   return gtids, err
 }
@@ -125,9 +180,15 @@ func (me *Instance) TransactionsExecuted() (string, error) {
 func (me *Instance) ForceMembers( fms string ) error {
   force_membership_query := "SET GLOBAL group_replication_force_members='" + fms + "'"
 
-  _, err := me.db.Exec( force_membership_query )
+  if( Debug ){
+    fmt.Printf( "Forcing group membership on '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, force_membership_query )
+  }
+
+  err := me.db.Ping()
+
+  if( err == nil ){
+    _, err = me.db.Exec( force_membership_query )
+  }
 
   return err
 }
- 
-

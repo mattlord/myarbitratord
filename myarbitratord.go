@@ -25,15 +25,24 @@ import (
 )
 
 type MembersByOnlineNodes []instances.Instance
+var debug = false
 
 func main(){
   if( len(os.Args) < 3 ){
-    fmt.Println( "myarbitratord usage: myarbitratord <seed_host> <seed_port>" )
+    fmt.Println( "myarbitratord usage: myarbitratord <seed_host> <seed_port> [true] (enable debug logging)" )
     os.Exit(1);
   }
 
   seed_host := os.Args[1]
   seed_port := os.Args[2]
+  if( len(os.Args) > 3 ){ 
+    debug_mode := os.Args[3]
+
+    if( debug_mode == "true" ){
+      instances.Debug = true
+      debug = true
+    }
+  }
 
   // Currently these credentials should work on any participating MySQL instance 
   mysql_user := "root"
@@ -136,6 +145,10 @@ func MonitorCluster( seed_node *instances.Instance ) error {
         sort.Sort( MembersByOnlineNodes(last_view) )
         // now the last element in the array is the one to use as it's coordinating with the most nodes 
         seed_node = &last_view[len(last_view)-1]
+
+        if( debug ){
+          fmt.Printf( "Member view sorted by number of online nodes: %v\n", last_view )
+        } 
 
         // let's build a string of '<host>:<port>' combinations that we want to use for the new membership view
         members, _ := seed_node.GetMembers()
