@@ -32,12 +32,11 @@ type Instance struct {
   Group_name string
   Server_uuid string
   Member_state string
-  Online_participants int
+  Online_participants uint8
   Has_quorum bool
   Read_only bool
   Applier_queue_size uint16
   db *sql.DB
-
 }
 
 // enable debug logging for all instances
