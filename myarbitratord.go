@@ -124,11 +124,11 @@ func MonitorCluster( seed_node *instances.Instance ) error {
         } 
       }
     } else {
-      // handling network partitions and split brain scenarios will be much trickier... I'll need to try and
+      // handling other network partitions and split brain scenarios will be much trickier... I'll need to try and
       // contact each member in the last seen view and try to determine which partition should become the
-      // primary one we'll then need to contact 1 node in the primary partition and explicitly set the new
-      // membership with 'set global group_replication_force_members="<node_list>"' and finally we'll need
-      // to try and connect to the nodes on the losing side of the partition and attempt to shutdown mysqld 
+      // primary one. We'll then need to contact 1 node in the new primary partition and explicitly set the new
+      // membership with 'set global group_replication_force_members="<node_list>"'. Finally we'll need to try
+      // and connect to the nodes on the losing side(s) of the partition and attempt to shutdown the mysqlds
 
       fmt.Println( "Network partition detected! Attempting to handle... " )
 
@@ -144,10 +144,10 @@ func MonitorCluster( seed_node *instances.Instance ) error {
         }
       }
 
-      // If noone in fact has a quorum, then let's see which partition has the most
-      // online/participating/communicating members; the participants in that partition
+      // If no one in fact has a quorum, then let's see which partition has the most
+      // online/participating/communicating members. The participants in that partition
       // will then be the ones that we use to force the new membership and unlock the cluster
-      // ToDo: should we consider GTID_EXECUTED sets when choosing a partition???
+      // ToDo: should we consider GTID_EXECUTED sets when choosing the primary partition???
       if( primary_partition == false ){
         fmt.Println( "No primary partition found! Attempting to choose and force a new one ... " )
 
