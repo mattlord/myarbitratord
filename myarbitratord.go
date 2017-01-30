@@ -125,6 +125,8 @@ func MonitorCluster( seed_node *instances.Instance ) error {
       // membership with 'set global group_replication_force_members="<node_list>"' and finally we'll need
       // to try and connect to the nodes on the losing side of the partition and attempt to shutdown mysqld 
 
+      fmt.Println( "Network partition detected! Attempting to handle... " )
+
       // does anyone have a quorum? Let's double check before forcing the membership 
       primary_partition := false
       for _, member := range last_view {
@@ -142,6 +144,8 @@ func MonitorCluster( seed_node *instances.Instance ) error {
       // will then be the ones that we use to force the new membership and unlock the cluster
       // ToDo: should we consider GTID_EXECUTED sets when choosing a partition???
       if( primary_partition == false ){
+        fmt.Println( "No primary partition found! Attempting to choose and force a new one ... " )
+
         sort.Sort( MembersByOnlineNodes(last_view) )
         // now the last element in the array is the one to use as it's coordinating with the most nodes 
         seed_node = &last_view[len(last_view)-1]
@@ -162,7 +166,7 @@ func MonitorCluster( seed_node *instances.Instance ) error {
           }
         }
 
-        fmt.Println( "Forcing group membership! using: '", force_member_string, "'" )
+        fmt.Println( "Forcing group membership to form new primary partition! Using: '", force_member_string, "'" )
         err = seed_node.ForceMembers( force_member_string ) 
       }
     }
