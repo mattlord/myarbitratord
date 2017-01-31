@@ -90,7 +90,7 @@ func MonitorCluster( seed_node *instances.Instance ) error {
         err = member.Connect()
         if( err == nil && member.Member_state == "ONLINE" ){
           seed_node = &member
-          fmt.Printf( "Updated seed node! New seed node is: '%s:%s'", seed_node.Mysql_host, seed_node.Mysql_port ) 
+          fmt.Printf( "Updated seed node! New seed node is: '%s:%s'\n", seed_node.Mysql_host, seed_node.Mysql_port ) 
           break
         }
       }
@@ -119,11 +119,11 @@ func MonitorCluster( seed_node *instances.Instance ) error {
 
       for _, member := range *members {
         if( member.Member_state == "ERROR" || member.Member_state == "UNREACHABLE" ){
-          fmt.Printf( "Shutting down non-healthy node: '%s:%s'", member.Mysql_host, member.Mysql_port )
+          fmt.Printf( "Shutting down non-healthy node: '%s:%s'\n", member.Mysql_host, member.Mysql_port )
           err = member.Shutdown()
        
           if( err != nil ){
-            fmt.Printf( "Could not shutdown instance: '%s:%s'", member.Mysql_host, member.Mysql_port )
+            fmt.Printf( "Could not shutdown instance: '%s:%s'\n", member.Mysql_host, member.Mysql_port )
           }
         } 
       }
@@ -175,7 +175,7 @@ func MonitorCluster( seed_node *instances.Instance ) error {
           }
         }
 
-        fmt.Printf( "Forcing group membership to form new primary partition! Using: '%s", force_member_string )
+        fmt.Printf( "Forcing group membership to form new primary partition! Using: '%s'\n", force_member_string )
         err = seed_node.ForceMembers( force_member_string ) 
       }
     }
