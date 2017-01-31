@@ -84,8 +84,10 @@ func MonitorCluster( seed_node *instances.Instance ) error {
     if( err != nil || seed_node.Member_state != "ONLINE" ){
       // if we couldn't connect to the current seed node or it's no longer part of the group
       // let's try and get a new seed node from the last known membership view 
+      fmt.Println( "Attempting to get a new seed node..." )
+
       for _, member := range last_view {
-        member.Connect()
+        err := member.Connect()
         if( err == nil && member.Member_state == "ONLINE" ){
           seed_node = &member
           fmt.Printf( "Updated seed node! New seed node is: '%s:%s'", seed_node.Mysql_host, seed_node.Mysql_port ) 
@@ -97,17 +99,19 @@ func MonitorCluster( seed_node *instances.Instance ) error {
     members, err := seed_node.GetMembers()
 
     if( err != nil ){
-      log.Fatal( err )
+      // something is up with our current seed node, let's loop again 
+      continue
     }
 
     // save this view in case the seed node is no longer valid next time 
-    //last_view = copy( last_view, members )
+    //last_view = copy( last_view, members[:] )
     last_view = *members
 
     quorum, err := seed_node.HasQuorum()
 
     if( err != nil ){
-      log.Fatal( err )
+      // something is up with our current seed node, let's loop again 
+      continue
     }
 
     if( quorum ){
