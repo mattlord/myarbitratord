@@ -126,7 +126,7 @@ func (me *Instance) IsReadOnly() (bool, error) {
 func (me *Instance) GetMembers() (*[]Instance, error) {
   membership_query := "SELECT member_id, member_host, member_port, member_state FROM replication_group_members"
   member_slice := []Instance{}
-  Online_participants := 0
+  me.Online_participants = 0
 
   if( Debug ){
     fmt.Printf( "Getting group members from '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, membership_query )
@@ -135,18 +135,22 @@ func (me *Instance) GetMembers() (*[]Instance, error) {
   err := me.db.Ping()
 
   if( err == nil ){
-    rows, err2 := me.db.Query( membership_query )
+    rows, err := me.db.Query( membership_query )
 
-    if( err2 == nil ){
+    if( err == nil ){
       defer rows.Close()
 
       for( rows.Next() ){
         member := New( "", "", me.Mysql_user, me.mysql_pass )
         err = rows.Scan( &member.Server_uuid, &member.Mysql_host, &member.Mysql_port, &member.Member_state )
         if( member.Member_state == "ONLINE" ){
-          Online_participants++ 
+          me.Online_participants++ 
         }
         member_slice = append( member_slice, *member )
+      }
+
+      if( Debug ){
+        fmt.Printf( "Group member info found for '%s:%s' -- ONLINE member count: %d, Members: %v\n", me.Mysql_host, me.Mysql_port, me.Online_participants, member_slice )
       }
     }
   }

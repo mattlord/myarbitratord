@@ -120,8 +120,15 @@ func MonitorCluster( seed_node *instances.Instance ) error {
       for _, member := range *members {
         if( member.Member_state == "ERROR" || member.Member_state == "UNREACHABLE" ){
           fmt.Printf( "Shutting down non-healthy node: '%s:%s'\n", member.Mysql_host, member.Mysql_port )
+          
+          err = member.Connect()
+
+          if( err != nil ){
+            fmt.Printf( "Could not connect to '%s:%s' in order to shut it down\n", member.Mysql_host, member.Mysql_port )
+          }
+
           err = member.Shutdown()
-       
+
           if( err != nil ){
             fmt.Printf( "Could not shutdown instance: '%s:%s'\n", member.Mysql_host, member.Mysql_port )
           }
@@ -159,15 +166,26 @@ func MonitorCluster( seed_node *instances.Instance ) error {
         // now the last element in the array is the one to use as it's coordinating with the most nodes 
         seed_node = &last_view[len(last_view)-1]
 
+        err = seed_node.Connect()
+      
+        if( err != nil ){
+          // let's just loop again 
+          continue 
+        }
+
         if( debug ){
           fmt.Printf( "Member view sorted by number of online nodes: %v\n", last_view )
         } 
 
         // let's build a string of '<host>:<port>' combinations that we want to use for the new membership view
         members, _ := seed_node.GetMembers()
+
         force_member_string := ""
+
         for i, member := range *members {
-          if( member.Member_state == "ONLINE" ){
+          err = member.Connect()
+
+          if( err == nil && member.Member_state == "ONLINE" ){
             if( i != 0 ){
               force_member_string = force_member_string + ","
             }
@@ -175,8 +193,12 @@ func MonitorCluster( seed_node *instances.Instance ) error {
           }
         }
 
-        fmt.Printf( "Forcing group membership to form new primary partition! Using: '%s'\n", force_member_string )
-        err = seed_node.ForceMembers( force_member_string ) 
+        if( force_member_string != "" ){
+          fmt.Printf( "Forcing group membership to form new primary partition! Using: '%s'\n", force_member_string )
+          err = seed_node.ForceMembers( force_member_string ) 
+        } else {
+          fmt.Println( "No valid group membership to force!" )
+        }
       }
     }
     
