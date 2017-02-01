@@ -22,6 +22,8 @@ import (
   "time"
   "flag"
   "sort"
+  "encoding/json"
+  "io/ioutil"
 )
 
 type MembersByOnlineNodes []instances.Instance
@@ -33,12 +35,18 @@ func main(){
   var debug_mode bool 
   var mysql_user string
   var mysql_pass string
+  var mysql_auth_file string
+  type json_mysql_auth struct {
+    User string
+    Password string
+  }
 
   flag.StringVar( &seed_host, "seed_host", "", "IP/Hostname of the seed node used to start monitoring the Group Replication cluster" )
   flag.StringVar( &seed_port, "seed_port", "3306", "Port of the seed node used to start monitoring the Group Replication cluster" )
   flag.BoolVar( &debug_mode, "debug", false, "Execute in debug mode with all debug logging enabled" )
   flag.StringVar( &mysql_user, "mysql_user", "root", "The mysql user account to be used when connecting to any node in the cluster" )
-  flag.StringVar( &mysql_pass, "mysql_pass", "", "The mysql user account password to be used when connecting to any node in the cluster" )
+  flag.StringVar( &mysql_pass, "mysql_password", "", "The mysql user account password to be used when connecting to any node in the cluster" )
+  flag.StringVar( &mysql_auth_file, "mysql_auth_file", "", "The JSON encoded file containining user and password entities for the mysql account to be used when connecting to any node in the cluster" )
 
   flag.Parse()
 
@@ -47,12 +55,43 @@ func main(){
 
   // A host is required, the default port of 3306 will then be attempted 
   if( seed_host == "" ){
-    fmt.Println( "myarbitratord usage: myarbitratord -seed_host=<seed_host> [-seed_port=<seed_port>] [-mysql_user=<mysql_user>] [-mysql_pass=<mysql_pass>] [-debug=true]" )
+    fmt.Println( "myarbitratord usage: myarbitratord -seed_host=<seed_host> [-seed_port=<seed_port>] [-mysql_user=<mysql_user>] [-mysql_password=<mysql_pass>] [-mysql_auth_file=<path to json file>] [-debug=true]" )
     os.Exit(1);
   }
 
   if( debug_mode ){
     instances.Debug = true
+  }
+
+  if( mysql_auth_file != "" && mysql_pass == "" ){
+    if( debug_mode ){
+      fmt.Printf( "Reading MySQL credentials from file: %s\n", mysql_auth_file )
+    }
+
+    jsonfile, err := ioutil.ReadFile( mysql_auth_file )
+
+    if( err != nil ){
+      log.Fatal( "Could not read mysql credentials from specified file: " + mysql_auth_file )
+    }
+
+    var jsonauth json_mysql_auth
+    json.Unmarshal( jsonfile, &jsonauth )
+
+    if( debug_mode ){
+      fmt.Printf( "Unmarshaled mysql auth file contents: %v\n", jsonauth )
+    }
+
+    mysql_user = jsonauth.User
+    mysql_pass = jsonauth.Password
+
+    if( mysql_user == "" || mysql_pass == "" ){
+      errstr := "Failed to read user and password from " + mysql_auth_file + ". Ensure that the file contents are in the required format: \n{\n  \"user\": \"myser\",\n  \"password\": \"mypass\"\n }"
+      log.Fatal( errstr )
+    }
+  
+    if( debug_mode ){
+      fmt.Printf( "Read mysql auth info from file. user: %s, password: %s\n", mysql_user, mysql_pass )
+    }
   }
 
   fmt.Println( "Welcome to the MySQL Group Replication Arbitrator!" )
@@ -145,6 +184,7 @@ func MonitorCluster( seed_node *instances.Instance ) error {
 
       // does anyone have a quorum? Let's double check before forcing the membership 
       primary_partition := false
+
       for _, member := range last_view {
         member.Connect()    
         quorum, err := member.HasQuorum()
