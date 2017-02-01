@@ -85,7 +85,7 @@ func main(){
     mysql_pass = jsonauth.Password
 
     if( mysql_user == "" || mysql_pass == "" ){
-      errstr := "Failed to read user and password from " + mysql_auth_file + ". Ensure that the file contents are in the required format: \n{\n  \"user\": \"myser\",\n  \"password\": \"mypass\"\n }"
+      errstr := "Failed to read user and password from " + mysql_auth_file + ". Ensure that the file contents are in the required format: \n{\n  \"user\": \"myser\",\n  \"password\": \"mypass\"\n}"
       log.Fatal( errstr )
     }
   
