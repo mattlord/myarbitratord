@@ -133,10 +133,10 @@ func MonitorCluster( seed_node *instances.Instance ) error {
       // let's try and get a new seed node from the last known membership view 
       InfoLog.Println( "Attempting to get a new seed node..." )
 
-      for _, member := range last_view {
-        err = member.Connect()
-        if( err == nil && member.Member_state == "ONLINE" ){
-          seed_node = &member
+      for i := 0; i < len(last_view); i++ {
+        err = last_view[i].Connect()
+        if( err == nil && last_view[i].Member_state == "ONLINE" ){
+          seed_node = &last_view[i]
           InfoLog.Printf( "Updated seed node! New seed node is: '%s:%s'\n", seed_node.Mysql_host, seed_node.Mysql_port ) 
           break
         }
@@ -176,9 +176,9 @@ func MonitorCluster( seed_node *instances.Instance ) error {
 
           if( err != nil ){
             InfoLog.Printf( "Could not connect to '%s:%s' in order to shut it down\n", member.Mysql_host, member.Mysql_port )
+          } else {
+            err = member.Shutdown()
           }
-
-          err = member.Shutdown()
 
           if( err != nil ){
             InfoLog.Printf( "Could not shutdown instance: '%s:%s'\n", member.Mysql_host, member.Mysql_port )
@@ -197,11 +197,22 @@ func MonitorCluster( seed_node *instances.Instance ) error {
       // does anyone have a quorum? Let's double check before forcing the membership 
       primary_partition := false
 
-      for _, member := range last_view {
-        member.Connect()    
-        quorum, err := member.HasQuorum()
+      for i := 0; i < len(last_view); i++ {
+        var err error 
+       
+        err = last_view[i].Connect()    
+      
+        if( err == nil ){
+          quorum, err = last_view[i].HasQuorum()
+          // let's make sure that the Online_participants is up to date 
+          _, err = last_view[i].GetMembers()
+        } else {
+          // let's flag this node so that we don't try and connect to it again when forcing the new view
+          last_view[i].Member_state = "OFFLINE"
+        }
+
         if( err == nil && quorum ){
-          seed_node = &member
+          seed_node = &last_view[i]
           primary_partition = true
           break
         }
@@ -215,7 +226,7 @@ func MonitorCluster( seed_node *instances.Instance ) error {
         InfoLog.Println( "No primary partition found! Attempting to choose and force a new one ... " )
 
         sort.Sort( MembersByOnlineNodes(last_view) )
-        // now the last element in the array is the one to use as it's coordinating with the most nodes 
+        // now the first element in the array is the one to use as it's coordinating with the most nodes 
         seed_node = &last_view[len(last_view)-1]
 
         err = seed_node.Connect()
@@ -235,19 +246,28 @@ func MonitorCluster( seed_node *instances.Instance ) error {
         force_member_string := ""
 
         for i, member := range *members {
-          err = member.Connect()
+          // let's not bother trying to connect again if we just failed to connect 
+          if( member.Member_state != "OFFLINE" ){
+            err = member.Connect()
+          }
 
           if( err == nil && member.Member_state == "ONLINE" ){
             if( i != 0 ){
               force_member_string = force_member_string + ","
             }
+ 
             force_member_string = force_member_string + member.Mysql_host + ":" + member.Mysql_port
           }
         }
 
         if( force_member_string != "" ){
           InfoLog.Printf( "Forcing group membership to form new primary partition! Using: '%s'\n", force_member_string )
-          err = seed_node.ForceMembers( force_member_string ) 
+
+          err := seed_node.ForceMembers( force_member_string ) 
+       
+          if( err != nil ){
+            InfoLog.Printf( "Error forcing group membership: %v\n", err )
+          } 
         } else {
           InfoLog.Println( "No valid group membership to force!" )
         }
