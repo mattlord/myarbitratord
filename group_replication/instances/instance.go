@@ -18,7 +18,8 @@ import (
   "database/sql"
   _ "github.com/go-sql-driver/mysql"
   "errors"
-  "fmt"
+  "log"
+  "os"
 )
 
 // member variables that start with capital letters are public/exported 
@@ -42,6 +43,11 @@ type Instance struct {
 // enable debug logging for all instances
 var Debug bool = false
 
+// setup debug logging for all instances
+var DebugLog = log.New(os.Stderr,
+               "DEBUG: ",
+               log.Ldate|log.Ltime|log.Lshortfile)
+
 
 func New( myh string, myp string, myu string, mys string ) * Instance {
   return &Instance{ Mysql_host: myh, Mysql_port: myp, Mysql_user: myu, mysql_pass: mys }
@@ -54,13 +60,13 @@ func (me *Instance) Connect() error {
     conn_string := me.Mysql_user + ":" + me.mysql_pass + "@tcp(" + me.Mysql_host + ":" + me.Mysql_port + ")/performance_schema"
 
     if( Debug ){
-      fmt.Printf( "Making SQL connection using: %s\n", conn_string )
+      DebugLog.Printf( "Making SQL connection using: %s\n", conn_string )
     }
 
     me.db, err = sql.Open( "mysql", conn_string )
 
     if( err != nil ){
-      fmt.Printf( "Error during sql.Open: %v", err )
+      DebugLog.Printf( "Error during sql.Open: %v", err )
     }
   }
 
@@ -70,7 +76,7 @@ func (me *Instance) Connect() error {
     query_str := "SELECT variable_value FROM global_variables WHERE variable_name='group_replication_group_name'"
 
     if( Debug ){
-      fmt.Printf( "Checking group name on '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, query_str )
+      DebugLog.Printf( "Checking group name on '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, query_str )
     }
 
     err = me.db.QueryRow( query_str ).Scan( &me.Group_name )
@@ -82,7 +88,7 @@ func (me *Instance) Connect() error {
     query_str = "SELECT variable_value, member_state FROM global_variables gv INNER JOIN replication_group_members rgm ON(gv.variable_value=rgm.member_id) WHERE gv.variable_name='server_uuid'"
 
     if( Debug ){
-      fmt.Printf( "Checking status of '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, query_str )
+      DebugLog.Printf( "Checking status of '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, query_str )
     }
 
     err = me.db.QueryRow( query_str ).Scan( &me.Server_uuid, &me.Member_state )
@@ -95,7 +101,7 @@ func (me *Instance) HasQuorum() (bool, error) {
   quorum_query := "SELECT IF( MEMBER_STATE='ONLINE' AND ((SELECT COUNT(*) FROM replication_group_members WHERE MEMBER_STATE != 'ONLINE') >= ((SELECT COUNT(*) FROM replication_group_members)/2) = 0), 'true', 'false' ) FROM replication_group_members JOIN replication_group_member_stats USING(member_id)"
 
   if( Debug ){
-    fmt.Printf( "Checking if '%s:%s' has a quorum. Query: %s\n", me.Mysql_host, me.Mysql_port, quorum_query )
+    DebugLog.Printf( "Checking if '%s:%s' has a quorum. Query: %s\n", me.Mysql_host, me.Mysql_port, quorum_query )
   }
 
   err := me.db.Ping()
@@ -111,7 +117,7 @@ func (me *Instance) IsReadOnly() (bool, error) {
   ro_query := "SELECT variable_value FROM global_variables WHERE variable_name='super_read_only'"
 
   if( Debug ){
-    fmt.Printf( "Checking if '%s:%s' is read only. Query: %s\n", me.Mysql_host, me.Mysql_port, ro_query )
+    DebugLog.Printf( "Checking if '%s:%s' is read only. Query: %s\n", me.Mysql_host, me.Mysql_port, ro_query )
   }
 
   err := me.db.Ping()
@@ -129,7 +135,7 @@ func (me *Instance) GetMembers() (*[]Instance, error) {
   me.Online_participants = 0
 
   if( Debug ){
-    fmt.Printf( "Getting group members from '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, membership_query )
+    DebugLog.Printf( "Getting group members from '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, membership_query )
   }
 
   err := me.db.Ping()
@@ -150,7 +156,7 @@ func (me *Instance) GetMembers() (*[]Instance, error) {
       }
 
       if( Debug ){
-        fmt.Printf( "Group member info found for '%s:%s' -- ONLINE member count: %d, Members: %v\n", me.Mysql_host, me.Mysql_port, me.Online_participants, member_slice )
+        DebugLog.Printf( "Group member info found for '%s:%s' -- ONLINE member count: %d, Members: %v\n", me.Mysql_host, me.Mysql_port, me.Online_participants, member_slice )
       }
     }
   }
@@ -162,7 +168,7 @@ func (me *Instance) Shutdown() error {
   shutdown_query := "SHUTDOWN"
 
   if( Debug ){
-    fmt.Printf( "Shutting down node '%s:%s'\n", me.Mysql_host, me.Mysql_port )
+    DebugLog.Printf( "Shutting down node '%s:%s'\n", me.Mysql_host, me.Mysql_port )
   }
 
   err := me.db.Ping()
@@ -180,7 +186,7 @@ func (me *Instance) TransactionsExecuted() (string, error) {
   gtid_query := "SELECT @@global.GTID_EXECUTED"
 
   if( Debug ){
-    fmt.Printf( "Getting the transactions executed on '%s:%s'\n", me.Mysql_host, me.Mysql_port )
+    DebugLog.Printf( "Getting the transactions executed on '%s:%s'\n", me.Mysql_host, me.Mysql_port )
   }
 
   err := me.db.Ping()
@@ -196,7 +202,7 @@ func (me *Instance) ForceMembers( fms string ) error {
   force_membership_query := "SET GLOBAL group_replication_force_members='" + fms + "'"
 
   if( Debug ){
-    fmt.Printf( "Forcing group membership on '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, force_membership_query )
+    DebugLog.Printf( "Forcing group membership on '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, force_membership_query )
   }
 
   err := me.db.Ping()
