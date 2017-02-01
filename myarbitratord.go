@@ -32,7 +32,6 @@ var debug = false
 func main(){
   var seed_host string 
   var seed_port string 
-  var debug_mode bool 
   var mysql_user string
   var mysql_pass string
   var mysql_auth_file string
@@ -43,7 +42,7 @@ func main(){
 
   flag.StringVar( &seed_host, "seed_host", "", "IP/Hostname of the seed node used to start monitoring the Group Replication cluster" )
   flag.StringVar( &seed_port, "seed_port", "3306", "Port of the seed node used to start monitoring the Group Replication cluster" )
-  flag.BoolVar( &debug_mode, "debug", false, "Execute in debug mode with all debug logging enabled" )
+  flag.BoolVar( &debug, "debug", false, "Execute in debug mode with all debug logging enabled" )
   flag.StringVar( &mysql_user, "mysql_user", "root", "The mysql user account to be used when connecting to any node in the cluster" )
   flag.StringVar( &mysql_pass, "mysql_password", "", "The mysql user account password to be used when connecting to any node in the cluster" )
   flag.StringVar( &mysql_auth_file, "mysql_auth_file", "", "The JSON encoded file containining user and password entities for the mysql account to be used when connecting to any node in the cluster" )
@@ -59,12 +58,12 @@ func main(){
     os.Exit(1);
   }
 
-  if( debug_mode ){
+  if( debug ){
     instances.Debug = true
   }
 
   if( mysql_auth_file != "" && mysql_pass == "" ){
-    if( debug_mode ){
+    if( debug ){
       fmt.Printf( "Reading MySQL credentials from file: %s\n", mysql_auth_file )
     }
 
@@ -77,7 +76,7 @@ func main(){
     var jsonauth json_mysql_auth
     json.Unmarshal( jsonfile, &jsonauth )
 
-    if( debug_mode ){
+    if( debug ){
       fmt.Printf( "Unmarshaled mysql auth file contents: %v\n", jsonauth )
     }
 
@@ -89,7 +88,7 @@ func main(){
       log.Fatal( errstr )
     }
   
-    if( debug_mode ){
+    if( debug ){
       fmt.Printf( "Read mysql auth info from file. user: %s, password: %s\n", mysql_user, mysql_pass )
     }
   }
@@ -152,6 +151,10 @@ func MonitorCluster( seed_node *instances.Instance ) error {
       // something is up with our current seed node, let's loop again 
       continue
     }
+
+    if( debug ){
+      fmt.Printf( "Seed node details: %v", seed_node )
+    } 
 
     if( quorum ){
       // Let's try and shutdown the nodes NOT in the primary partition if we can reach them from the arbitrator 
