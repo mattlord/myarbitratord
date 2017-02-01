@@ -156,7 +156,7 @@ func (me *Instance) GetMembers() (*[]Instance, error) {
       }
 
       if( Debug ){
-        DebugLog.Printf( "Group member info found for '%s:%s' -- ONLINE member count: %d, Members: %v\n", me.Mysql_host, me.Mysql_port, me.Online_participants, member_slice )
+        DebugLog.Printf( "Group member info found for '%s:%s' -- ONLINE member count: %d, Members: %+v\n", me.Mysql_host, me.Mysql_port, me.Online_participants, member_slice )
       }
     }
   }
