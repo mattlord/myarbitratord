@@ -7,7 +7,9 @@ This deamon will attempt to automatically handle network partitions of various k
 Usage of myarbitratord:
   -debug
     	Execute in debug mode with all debug logging enabled
-  -mysql_pass string
+  -mysql_auth_file string
+    	The JSON encoded file containining user and password entities for the mysql account to be used when connecting to any node in the cluster
+  -mysql_password string
     	The mysql user account password to be used when connecting to any node in the cluster
   -mysql_user string
     	The mysql user account to be used when connecting to any node in the cluster (default "root")
