@@ -227,6 +227,8 @@ func MonitorCluster( seed_node *instances.Instance ) error {
 
         sort.Sort( MembersByOnlineNodes(last_view) )
         // now the first element in the array is the one to use as it's coordinating with the most nodes 
+        // ToDo: if there's no clear winner based on sub-partition size, then we should pick the sub-partition (which can be 1 node)
+        // ToDo: that has the GTID superset by comparing the output of Instance.TransactionsExecuted()
         seed_node = &last_view[len(last_view)-1]
 
         err = seed_node.Connect()
