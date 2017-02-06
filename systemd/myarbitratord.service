@@ -1,5 +1,6 @@
 [Unit]
 Description=MySQL Group Replication Arbitrator
+Documentation=https://github.com/mattlord/myarbitratord/blob/master/README.md
 After=syslog.target
 After=network.target
 
