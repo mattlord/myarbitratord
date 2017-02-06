@@ -206,9 +206,6 @@ func MonitorCluster( seed_node *instances.Instance ) error {
           quorum, err = last_view[i].HasQuorum()
           // let's make sure that the Online_participants is up to date 
           _, err = last_view[i].GetMembers()
-        } else {
-          // let's flag this node so that we don't try and connect to it again when forcing the new view
-          last_view[i].Member_state = "OFFLINE"
         }
 
         if( err == nil && quorum ){
@@ -248,10 +245,7 @@ func MonitorCluster( seed_node *instances.Instance ) error {
         force_member_string := ""
 
         for i, member := range *members {
-          // let's not bother trying to connect again if we just failed to connect 
-          if( member.Member_state != "OFFLINE" ){
-            err = member.Connect()
-          }
+          err = member.Connect()
 
           if( err == nil && member.Member_state == "ONLINE" ){
             if( i != 0 ){
