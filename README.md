@@ -29,8 +29,21 @@ Specifying the MySQL credentials on the command-line is insecure as the password
 }
 ```
 
+# Installation:
+1. Install golang: https://golang.org/doc/install
 
-Here's an example:
+2. Setup environment: e.g. `export GOBIN=/Users/matt/go-workspace/bin GOPATH=/Users/matt/go-workspace`
+
+2. Install compile-time dependencies: `cd $GOPATH && git clone https://github.com/go-sql-driver/mysql src/github.com/go-sql-driver/mysql`
+
+3. Checkout source: `cd $GOPATH && git clone https://github.com/mattlord/myarbitratord src/github.com/mattlord/myarbitratord/`
+
+4. Build: `cd $GOPATH/src/github.com/mattlord/myarbitratord && go install myarbitratord.go` (compiles myarbitratord and places binary in $GOBIN)
+
+5. Run: `$GOBIN/myarbitratord -help`
+
+
+# Example usage:
 ```
 gonzo:myarbitratord matt$ $GOBIN/myarbitratord -seed_host="hanode2" -mysql_auth_file="/Users/matt/.my.json" -debug 
 DEBUG: 2017/02/01 12:04:15 myarbitratord.go:73: Reading MySQL credentials from file: /Users/matt/.my.json
@@ -53,4 +66,5 @@ DEBUG: 2017/02/01 12:04:17 instance.go:104: Checking if 'hanode2:3306' has a quo
 DEBUG: 2017/02/01 12:04:17 myarbitratord.go:162: Seed node details: &{Mysql_host:hanode2 Mysql_port:3306 Mysql_user:root mysql_pass:xxxxx Group_name:550fa9ee-a1f8-4b6d-9bfe-c03c12cd1c72 Server_uuid:39a07a39-4b82-44d2-a3cd-978511564a57 Member_state:ONLINE Online_participants:3 Has_quorum:true Read_only:false Applier_queue_size:0 db:0xc4200b8000}
 ...
 ```
+
 
