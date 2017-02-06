@@ -1,0 +1,21 @@
+[Unit]
+Description=MySQL Group Replication Arbitrator
+After=syslog.target
+After=network.target
+
+[Service]
+Type=simple
+User=mysql
+Group=mysql
+
+PIDFile=/var/run/myarbitratord.pid
+
+ExecStart=/usr/bin/myarbitratord
+
+Restart=on-failure
+
+PrivateTmp=false
+
+[Install]
+WantedBy=multi-user.target
+
