@@ -218,15 +218,37 @@ func MonitorCluster( seed_node *instances.Instance ) error {
       // If no one in fact has a quorum, then let's see which partition has the most
       // online/participating/communicating members. The participants in that partition
       // will then be the ones that we use to force the new membership and unlock the cluster
-      // ToDo: should we consider GTID_EXECUTED sets when choosing the primary partition???
+      
       if( primary_partition == false ){
         InfoLog.Println( "No primary partition found! Attempting to choose and force a new one ... " )
 
         sort.Sort( MembersByOnlineNodes(last_view) )
         // now the first element in the array is the one to use as it's coordinating with the most nodes 
-        // ToDo: if there's no clear winner based on sub-partition size, then we should pick the sub-partition (which can be 1 node)
-        // ToDo: that has the GTID superset by comparing the output of Instance.TransactionsExecuted()
-        seed_node = &last_view[len(last_view)-1]
+
+        view_len := len(last_view)-1
+        bestmemberpos := len(last_view)-1
+        bestmembertrxcnt := 0
+        curtrxcnt := 0
+       
+        // If there's no clear winner based on sub-partition size, then we should pick the sub-partition (which can be 1 node)
+        // that has executed the most GTIDs
+        if( last_view[view_len].Online_participants == last_view[view_len-1].Online_participants ){
+          bestmembertrxcnt, err = last_view[view_len].TransactionCount()
+
+          for i := 0; i < view_len; i++ {
+            if( last_view[i].Online_participants == last_view[bestmemberpos].Online_participants ){
+              curtrxcnt, err = last_view[i].TransactionCount()
+              
+              if( curtrxcnt > bestmembertrxcnt ){
+                bestmembertrxcnt, err = last_view[i].TransactionCount()
+                bestmemberpos = i
+              }
+            }
+          }
+        
+          seed_node = &last_view[bestmemberpos]
+        }
+        
 
         err = seed_node.Connect()
       

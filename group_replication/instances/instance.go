@@ -20,6 +20,8 @@ import (
   "database/sql"
   _ "github.com/go-sql-driver/mysql"
   "errors"
+  "strings"
+  "strconv"
   "log"
   "os"
 )
@@ -199,6 +201,49 @@ func (me *Instance) TransactionsExecuted() (string, error) {
 
   return gtids, err
 }
+
+func (me *Instance) TransactionCount() (int, error) {  
+  gtid_set, err := me.TransactionsExecuted()
+  gtid_count := 0 
+
+  if( err != nil ){
+    next_dash_pos := 0
+    next_colon_pos := 0
+    next_comma_pos := 0
+    colon_pos := strings.IndexRune( gtid_set, ':' )
+
+    for colon_pos != -1 { 
+      // lets get rid of everything before the current colon, and the colon itself, as it's UUID info that we don't care about
+      gtid_set = gtid_set[colon_pos+1:]
+       
+      next_dash_pos = strings.IndexRune( gtid_set, '-' )
+      next_colon_pos = strings.IndexRune( gtid_set, ':' )
+      next_comma_pos = strings.IndexRune( gtid_set, ',' )
+       
+      if( next_dash_pos < next_colon_pos && next_dash_pos < next_comma_pos ){
+        nval := 0
+
+        if( next_colon_pos < next_comma_pos ){
+          nval, err = strconv.Atoi( gtid_set[next_dash_pos+1 : next_colon_pos-1] )
+        } else {
+          nval, err = strconv.Atoi( gtid_set[next_dash_pos+1 : next_comma_pos-1] )
+        }
+
+        if( err != nil ){
+          break
+        }
+
+        gtid_count = gtid_count + nval
+      } else {
+        gtid_count = gtid_count + 1
+      }
+
+      colon_pos = strings.IndexRune( gtid_set, ':' )
+    }
+  }             
+         
+  return gtid_count, err;
+}   
 
 func (me *Instance) ForceMembers( fms string ) error {
   force_membership_query := "SET GLOBAL group_replication_force_members='" + fms + "'"
