@@ -253,6 +253,8 @@ func MonitorCluster( seed_node *instances.Instance ) error {
             }
  
             force_member_string = force_member_string + member.Mysql_host + ":" + member.Mysql_port
+          } else {
+            member.Member_state = "SHOOT_ME"
           }
         }
 
@@ -263,7 +265,18 @@ func MonitorCluster( seed_node *instances.Instance ) error {
        
           if( err != nil ){
             InfoLog.Printf( "Error forcing group membership: %v\n", err )
-          } 
+          } else {
+            // We successfully unblocked the group, now let's try and politely STONITH the nodes in the losing partition 
+            for _, member := range *members {
+              if( member.Member_state == "SHOOT_ME" ){
+                member.Shutdown()
+              }
+
+              if( err != nil ){
+                InfoLog.Printf( "Could not shutdown instance: '%s:%s'\n", member.Mysql_host, member.Mysql_port )
+              }
+            }
+          }
         } else {
           InfoLog.Println( "No valid group membership to force!" )
         }
