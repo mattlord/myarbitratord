@@ -218,21 +218,22 @@ func MonitorCluster( seed_node *instances.Instance ) error {
       // If no one in fact has a quorum, then let's see which partition has the most
       // online/participating/communicating members. The participants in that partition
       // will then be the ones that we use to force the new membership and unlock the cluster
-      
+
       if( primary_partition == false ){
         InfoLog.Println( "No primary partition found! Attempting to choose and force a new one ... " )
 
         sort.Sort( MembersByOnlineNodes(last_view) )
-        // now the first element in the array is the one to use as it's coordinating with the most nodes 
 
+        // now the last element in the array is the one to use as it's coordinating with the most nodes 
         view_len := len(last_view)-1
-        bestmemberpos := len(last_view)-1
-        bestmembertrxcnt := 0
-        curtrxcnt := 0
-       
-        // If there's no clear winner based on sub-partition size, then we should pick the sub-partition (which can be 1 node)
-        // that has executed the most GTIDs
+        seed_node = &last_view[view_len]
+
+        // *BUT*, if there's no clear winner based on sub-partition size, then we should pick the sub-partition (which
+        // can be 1 node) that has executed the most GTIDs
         if( last_view[view_len].Online_participants == last_view[view_len-1].Online_participants ){
+          bestmemberpos := view_len
+          bestmembertrxcnt := 0
+          curtrxcnt := 0
           bestmembertrxcnt, err = last_view[view_len].TransactionCount()
 
           // let's loop backwards through the array as it's sorted by online participants / partition size now
