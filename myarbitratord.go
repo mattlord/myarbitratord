@@ -235,7 +235,8 @@ func MonitorCluster( seed_node *instances.Instance ) error {
         if( last_view[view_len].Online_participants == last_view[view_len-1].Online_participants ){
           bestmembertrxcnt, err = last_view[view_len].TransactionCount()
 
-          for i := 0; i < view_len; i++ {
+          // let's loop backwards through the array as it's sorted by online participants / partition size now
+          for i := view_len; i >= 0; i-- {
             if( last_view[i].Online_participants == last_view[bestmemberpos].Online_participants ){
               curtrxcnt, err = last_view[i].TransactionCount()
               
@@ -243,6 +244,9 @@ func MonitorCluster( seed_node *instances.Instance ) error {
                 bestmembertrxcnt, err = last_view[i].TransactionCount()
                 bestmemberpos = i
               }
+            } else {
+              // otherwise we've gone backwards far enough and we have the best option 
+              break
             }
           }
         
