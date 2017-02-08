@@ -243,7 +243,7 @@ func MonitorCluster( seed_node *instances.Instance ) error {
               curtrxcnt, err = last_view[i].TransactionCount()
               
               if( curtrxcnt > bestmembertrxcnt ){
-                bestmembertrxcnt, err = last_view[i].TransactionCount()
+                bestmembertrxcnt = curtrxcnt
                 bestmemberpos = i
               }
             } else {
@@ -255,7 +255,6 @@ func MonitorCluster( seed_node *instances.Instance ) error {
           seed_node = &last_view[bestmemberpos]
         }
         
-
         err = seed_node.Connect()
       
         if( err != nil ){
