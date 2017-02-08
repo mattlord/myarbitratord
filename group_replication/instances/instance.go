@@ -245,10 +245,6 @@ func (me *Instance) TransactionCount() (int, error) {
           // the first GTID counts too 
           firstval = firstval-1
 
-          if( Debug ){
-            DebugLog.Printf( "The current calculation is: (%d - %d)\n", secondval, firstval )
-          }
-
           nextval = secondval - firstval
         } else {
           firstval, err = strconv.Atoi( gtid_set[:next_dash_pos] )
@@ -257,42 +253,30 @@ func (me *Instance) TransactionCount() (int, error) {
           // the first GTID counts too 
           firstval = firstval-1
 
-          if( Debug ){
-            DebugLog.Printf( "The current calculation is: (%d - %d)\n", secondval, firstval )
-          }
-
           nextval = secondval - firstval
         }
-
-        if( err != nil ){
-          break
-        }
-
-        if( Debug ){
-          DebugLog.Printf( "Current total: %d, adding %d\n", gtid_count, nextval )
-        }
-
-        gtid_count = gtid_count + nextval
       } else if( next_colon_pos == -1 && next_dash_pos != -1 ){
         firstval, err = strconv.Atoi( gtid_set[:next_dash_pos] )
         secondval, err = strconv.Atoi( gtid_set[next_dash_pos+1:] )
 
         // the first GTID counts too 
         firstval = firstval-1
- 
-        if( Debug ){
-          DebugLog.Printf( "The current calculation is: (%d - %d)\n", secondval, firstval )
-        }
 
         nextval = secondval - firstval
-        gtid_count = gtid_count + nextval
       } else {
-        if( Debug ){
-          DebugLog.Printf( "Current total: %d, adding static value of 1\n", gtid_count )
-        }
-
-        gtid_count = gtid_count + 1
+        nextval = 1
       }
+
+      if( err != nil ){
+        break
+      }
+
+      if( Debug ){
+        DebugLog.Printf( "The current calculation is: (%d - %d)\n", secondval, firstval )
+        DebugLog.Printf( "Current total: %d, adding %d\n", gtid_count, nextval )
+      }
+
+      gtid_count = gtid_count + nextval
 
       colon_pos = strings.IndexRune( gtid_set, ':' )
 
