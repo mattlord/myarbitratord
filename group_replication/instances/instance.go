@@ -202,11 +202,24 @@ func (me *Instance) TransactionsExecuted() (string, error) {
   return gtids, err
 }
 
+/* 
+ We need to count all of the GTIDs in total
+ An example set being:
+"39a07a39-4b82-44d2-a3cd-978511564a57:1-37,
+49311a3a-e058-46ba-8e7b-857b5db7d33f:1,
+550fa9ee-a1f8-4b6d-9bfe-c03c12cd1c72:1-550757:1001496-1749225:2001496-2835762,
+de6858e8-0669-4b82-a188-d2906daa6d91:1-119927"
+With the total transaction count for that set being: 2252719
+*/
 func (me *Instance) TransactionCount() (int, error) {  
   gtid_set, err := me.TransactionsExecuted()
   gtid_count := 0 
 
-  if( err != nil ){
+  if( err == nil ){
+    if( Debug ){
+      DebugLog.Printf( "Calculating total number of GTIDs from a set of: %s\n", gtid_set )
+    }
+
     next_dash_pos := 0
     next_colon_pos := 0
     next_comma_pos := 0
@@ -220,29 +233,76 @@ func (me *Instance) TransactionCount() (int, error) {
       next_colon_pos = strings.IndexRune( gtid_set, ':' )
       next_comma_pos = strings.IndexRune( gtid_set, ',' )
        
-      if( next_dash_pos < next_colon_pos && next_dash_pos < next_comma_pos ){
-        nval := 0
+      firstval := 0
+      secondval := 0
+      nextval := 0
 
+      if( next_dash_pos < next_colon_pos && next_dash_pos < next_comma_pos ){
         if( next_colon_pos < next_comma_pos ){
-          nval, err = strconv.Atoi( gtid_set[next_dash_pos+1 : next_colon_pos-1] )
+          firstval, err = strconv.Atoi( gtid_set[:next_dash_pos] )
+          secondval, err = strconv.Atoi( gtid_set[next_dash_pos+1 : next_colon_pos] )
+
+          // the first GTID counts too 
+          firstval = firstval-1
+
+          if( Debug ){
+            DebugLog.Printf( "The current calculation is: (%d - %d)\n", secondval, firstval )
+          }
+
+          nextval = secondval - firstval
         } else {
-          nval, err = strconv.Atoi( gtid_set[next_dash_pos+1 : next_comma_pos-1] )
+          firstval, err = strconv.Atoi( gtid_set[:next_dash_pos] )
+          secondval, err = strconv.Atoi( gtid_set[next_dash_pos+1 : next_comma_pos] )
+
+          // the first GTID counts too 
+          firstval = firstval-1
+
+          if( Debug ){
+            DebugLog.Printf( "The current calculation is: (%d - %d)\n", secondval, firstval )
+          }
+
+          nextval = secondval - firstval
         }
 
         if( err != nil ){
           break
         }
 
-        gtid_count = gtid_count + nval
+        if( Debug ){
+          DebugLog.Printf( "Current total: %d, adding %d\n", gtid_count, nextval )
+        }
+
+        gtid_count = gtid_count + nextval
+      } else if( next_colon_pos == -1 && next_dash_pos != -1 ){
+        firstval, err = strconv.Atoi( gtid_set[:next_dash_pos] )
+        secondval, err = strconv.Atoi( gtid_set[next_dash_pos+1:] )
+
+        // the first GTID counts too 
+        firstval = firstval-1
+ 
+        if( Debug ){
+          DebugLog.Printf( "The current calculation is: (%d - %d)\n", secondval, firstval )
+        }
+
+        nextval = secondval - firstval
+        gtid_count = gtid_count + nextval
       } else {
+        if( Debug ){
+          DebugLog.Printf( "Current total: %d, adding static value of 1\n", gtid_count )
+        }
+
         gtid_count = gtid_count + 1
       }
 
       colon_pos = strings.IndexRune( gtid_set, ':' )
+
+      if( Debug ){
+        DebugLog.Printf( "Remaining unprocessed GTID string: %s\n", gtid_set )
+      }
     }
   }             
          
-  return gtid_count, err;
+  return gtid_count, err
 }   
 
 func (me *Instance) ForceMembers( fms string ) error {
