@@ -16,7 +16,7 @@ Usage of myarbitratord:
   -mysql_user string
     	The mysql user account to be used when connecting to any node in the cluster (default "root")
   -seed_host string
-    	IP/Hostname of the seed node used to start monitoring the Group Replication cluster
+    	IP/Hostname of the seed node used to start monitoring the Group Replication cluster (Required Parameter!)
   -seed_port string
     	Port of the seed node used to start monitoring the Group Replication cluster (default "3306")
 ```
