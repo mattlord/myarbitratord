@@ -24,6 +24,7 @@ import (
   "time"
   "flag"
   "sort"
+  "fmt"
   "encoding/json"
   "io/ioutil"
 )
@@ -50,7 +51,7 @@ func main(){
     Password string
   }
 
-  flag.StringVar( &seed_host, "seed_host", "", "IP/Hostname of the seed node used to start monitoring the Group Replication cluster" )
+  flag.StringVar( &seed_host, "seed_host", "", "IP/Hostname of the seed node used to start monitoring the Group Replication cluster (Required Parameter!)" )
   flag.StringVar( &seed_port, "seed_port", "3306", "Port of the seed node used to start monitoring the Group Replication cluster" )
   flag.BoolVar( &debug, "debug", false, "Execute in debug mode with all debug logging enabled" )
   flag.StringVar( &mysql_user, "mysql_user", "root", "The mysql user account to be used when connecting to any node in the cluster" )
@@ -64,7 +65,10 @@ func main(){
 
   // A host is required, the default port of 3306 will then be attempted 
   if( seed_host == "" ){
-    log.Fatal( "myarbitratord usage: myarbitratord -seed_host=<seed_host> [-seed_port=<seed_port>] [-mysql_user=<mysql_user>] [-mysql_password=<mysql_pass>] [-mysql_auth_file=<path to json file>] [-debug=true]" )
+    fmt.Fprintf( os.Stderr, "No value specified for required flag: -seed_host\n" )
+    fmt.Fprintf( os.Stderr, "Usage of %s:\n", os.Args[0] )
+    flag.PrintDefaults()
+    os.Exit( 1 )
   }
 
   if( debug ){
