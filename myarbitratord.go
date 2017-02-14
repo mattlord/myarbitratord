@@ -20,36 +20,69 @@ package main
 import (
   "os"
   "log"
-  "github.com/mattlord/myarbitratord/group_replication/instances"
   "time"
   "flag"
   "sort"
   "fmt"
-  "encoding/json"
+  "net/http"
   "io/ioutil"
+  "encoding/json"
+  "github.com/mattlord/myarbitratord/group_replication/instances"
 )
 
 type MembersByOnlineNodes []instances.Instance
 var debug = false
 
-var InfoLog = log.New(os.Stderr,
+var InfoLog = log.New( os.Stderr,
               "INFO: ",
-              log.Ldate|log.Ltime|log.Lshortfile)
+              log.Ldate|log.Ltime|log.Lshortfile )
 
-var DebugLog = log.New(os.Stderr,
+var DebugLog = log.New( os.Stderr,
                "DEBUG: ",
-               log.Ldate|log.Ltime|log.Lshortfile)
+               log.Ldate|log.Ltime|log.Lshortfile )
+
+// This is where I'll store all operating status metrics, presented as JSON via HTTP 
+type stats struct {
+  // This will really be the process start time that I can then use to display the uptime 
+  start_time time.Time		`json:"Started"`
+  uptime func() (time.Duration)	`json:"Uptime"`
+  loops  uint			`json:"Loops"`
+  partitions uint		`json:"Partitions"`
+}
+var mystats stats
+
+// This will serve the stats via a simple RESTful API
+func statsHandler( httpW http.ResponseWriter, httpR *http.Request ){
+  if( debug ){
+    DebugLog.Println( "Handling HTTP request for stats. Current stats are: %+v", mystats )
+  }
+
+  statsJSON, err := json.Marshal( &mystats )
+
+  if( err != nil ){
+    InfoLog.Printf( "Error handling HTTP request for stats: %+v", err )
+  }
+  
+  fmt.Fprintf( httpW, "%s", statsJSON )
+}
+
 
 func main(){
+  mystats.start_time = time.Now()
+  mystats.uptime = func() time.Duration { return time.Since( mystats.start_time ) }
   var seed_host string 
   var seed_port string 
   var mysql_user string
   var mysql_pass string
   var mysql_auth_file string
   type json_mysql_auth struct {
-    User string
-    Password string
+    User string      `json:"user"`
+    Password string  `json:"password"`
   }
+  // let's start a thread to handle the RESTful API calls
+  serverMux := http.NewServeMux()
+  serverMux.HandleFunc( "/stats", statsHandler )
+  go http.ListenAndServe( ":8099", serverMux )
 
   flag.StringVar( &seed_host, "seed_host", "", "IP/Hostname of the seed node used to start monitoring the Group Replication cluster (Required Parameter!)" )
   flag.StringVar( &seed_port, "seed_port", "3306", "Port of the seed node used to start monitoring the Group Replication cluster" )
@@ -128,6 +161,8 @@ func MonitorCluster( seed_node *instances.Instance ) error {
   last_view := []instances.Instance{}
   
   for( loop == true ){
+    mystats.loops = mystats.loops + 1
+
     // let's check the status of the current seed node
     // if the seed node 
     err = seed_node.Connect()
