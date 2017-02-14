@@ -10,7 +10,7 @@ Usage of myarbitratord:
   -debug
     	Execute in debug mode with all debug logging enabled
   -http_port string
-    	The HTTP port used for the RESTful stats API (default "8099")
+    	The HTTP port used for the RESTful API (default "8099")
   -mysql_auth_file string
     	The JSON encoded file containining user and password entities for the mysql account to be used when connecting to any node in the cluster
   -mysql_password string

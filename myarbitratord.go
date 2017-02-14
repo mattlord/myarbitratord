@@ -101,7 +101,7 @@ func main(){
   flag.StringVar( &mysql_user, "mysql_user", "root", "The mysql user account to be used when connecting to any node in the cluster" )
   flag.StringVar( &mysql_pass, "mysql_password", "", "The mysql user account password to be used when connecting to any node in the cluster" )
   flag.StringVar( &mysql_auth_file, "mysql_auth_file", "", "The JSON encoded file containining user and password entities for the mysql account to be used when connecting to any node in the cluster" )
-  flag.StringVar( &http_port, "http_port", "8099", "The HTTP port used for the RESTful stats API" )
+  flag.StringVar( &http_port, "http_port", "8099", "The HTTP port used for the RESTful API" )
 
   flag.Parse()
 
@@ -116,7 +116,7 @@ func main(){
     os.Exit( 1 )
   }
 
-  InfoLog.Printf( "Starting HTTP server for RESTful stats information on port %s\n", http_port )
+  InfoLog.Printf( "Starting HTTP server for RESTful API on port %s\n", http_port )
   go http.ListenAndServe( ":" + http_port, serverMux )
 
   if( debug ){
