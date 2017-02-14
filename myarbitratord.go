@@ -44,23 +44,35 @@ var DebugLog = log.New( os.Stderr,
 // This is where I'll store all operating status metrics, presented as JSON via HTTP 
 type stats struct {
   // This will really be the process start time that I can then use to display the uptime 
-  start_time time.Time		`json:"Started"`
-  uptime func() (time.Duration)	`json:"Uptime"`
-  loops  uint			`json:"Loops"`
-  partitions uint		`json:"Partitions"`
+  Start_time string	`json:"Started"`
+  Uptime string		`json:"Uptime"`
+  Loops  uint		`json:"Loops"`
+  Partitions uint	`json:"Partitions"`
 }
-var mystats stats
+var mystats = stats{ Start_time: time.Now().String(), Loops: 0, Partitions: 0 }
+
+// This will simply note the available API calls
+func defaultHandler( httpW http.ResponseWriter, httpR *http.Request ){
+  if( debug ){
+    DebugLog.Println( "Handling HTTP request without API call." )
+  }
+
+  fmt.Fprintf( httpW, "Welcome to the MySQL Arbitrator's RESTful API handler!\n\nThe available API calls are:\n/stats: Provide runtime and operational stats\n" )
+}
 
 // This will serve the stats via a simple RESTful API
 func statsHandler( httpW http.ResponseWriter, httpR *http.Request ){
   if( debug ){
-    DebugLog.Println( "Handling HTTP request for stats. Current stats are: %+v", mystats )
+    DebugLog.Printf( "Handling HTTP request for stats. Current stats are: %+v\n", mystats )
   }
+
+  tval, _ := time.Parse( mystats.Start_time, mystats.Start_time )
+  mystats.Uptime = tval.String()
 
   statsJSON, err := json.Marshal( &mystats )
 
   if( err != nil ){
-    InfoLog.Printf( "Error handling HTTP request for stats: %+v", err )
+    InfoLog.Printf( "Error handling HTTP request for stats: %+v\n", err )
   }
   
   fmt.Fprintf( httpW, "%s", statsJSON )
@@ -68,8 +80,6 @@ func statsHandler( httpW http.ResponseWriter, httpR *http.Request ){
 
 
 func main(){
-  mystats.start_time = time.Now()
-  mystats.uptime = func() time.Duration { return time.Since( mystats.start_time ) }
   var seed_host string 
   var seed_port string 
   var mysql_user string
@@ -81,8 +91,9 @@ func main(){
   }
   // let's start a thread to handle the RESTful API calls
   serverMux := http.NewServeMux()
+  serverMux.HandleFunc( "/", defaultHandler )
   serverMux.HandleFunc( "/stats", statsHandler )
-  go http.ListenAndServe( ":8099", serverMux )
+  var http_port string = "8099"
 
   flag.StringVar( &seed_host, "seed_host", "", "IP/Hostname of the seed node used to start monitoring the Group Replication cluster (Required Parameter!)" )
   flag.StringVar( &seed_port, "seed_port", "3306", "Port of the seed node used to start monitoring the Group Replication cluster" )
@@ -90,6 +101,7 @@ func main(){
   flag.StringVar( &mysql_user, "mysql_user", "root", "The mysql user account to be used when connecting to any node in the cluster" )
   flag.StringVar( &mysql_pass, "mysql_password", "", "The mysql user account password to be used when connecting to any node in the cluster" )
   flag.StringVar( &mysql_auth_file, "mysql_auth_file", "", "The JSON encoded file containining user and password entities for the mysql account to be used when connecting to any node in the cluster" )
+  flag.StringVar( &http_port, "http_port", "8099", "The HTTP port used for the RESTful stats API" )
 
   flag.Parse()
 
@@ -103,6 +115,9 @@ func main(){
     flag.PrintDefaults()
     os.Exit( 1 )
   }
+
+  InfoLog.Printf( "Starting HTTP server for RESTful stats information on port %s\n", http_port )
+  go http.ListenAndServe( ":" + http_port, serverMux )
 
   if( debug ){
     instances.Debug = true
@@ -161,7 +176,7 @@ func MonitorCluster( seed_node *instances.Instance ) error {
   last_view := []instances.Instance{}
   
   for( loop == true ){
-    mystats.loops = mystats.loops + 1
+    mystats.Loops = mystats.Loops + 1
 
     // let's check the status of the current seed node
     // if the seed node 
