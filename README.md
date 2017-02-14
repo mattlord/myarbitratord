@@ -32,7 +32,7 @@ Specifying the MySQL credentials on the command-line is insecure as the password
 }
 ```
 
-**Note that the RESTful API currently has not authentication mechanism!**
+**Note:** _The the RESTful API currently has not authentication mechanism_
 
 
 ## Installation:
@@ -74,7 +74,7 @@ DEBUG: 2017/02/14 12:25:04 myarbitratord.go:219: Seed node details: &{Mysql_host
 ...
 ```
 
-## RESTful API Examples:
+## Available RESTful API Calls With Example Output:
 ```
 "/"
 
@@ -89,6 +89,7 @@ The available API calls are:
 
 ```
 "/stats"
+
 {
     "Started": "Tue, 14 Feb 2017 13:05:09 EST",
     "Uptime": "4.722337196s",
