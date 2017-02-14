@@ -75,23 +75,22 @@ DEBUG: 2017/02/14 12:25:04 myarbitratord.go:219: Seed node details: &{Mysql_host
 ```
 
 ## Available RESTful API Calls With Example Output:
-```
 "/"
-
+```
+gonzo:~ matt$ curl http://localhost:8099/
 Welcome to the MySQL Arbitrator's RESTful API handler!
 
 The available API calls are:
 /stats: Provide runtime and operational stats
-
 ```
 
-```
 "/stats"
-
+```
+gonzo:~ matt$ curl http://localhost:8099/stats
 {
-    "Started": "Tue, 14 Feb 2017 13:05:09 EST",
-    "Uptime": "4.722337196s",
-    "Loops": 2,
+    "Started": "Tue, 14 Feb 2017 13:32:02 EST",
+    "Uptime": "17.123650942s",
+    "Loops": 9,
     "Partitions": 0,
     "Current Seed Node": {
         "Mysql_host": "hanode2",
