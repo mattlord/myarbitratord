@@ -35,9 +35,9 @@ Specifying the MySQL credentials on the command-line is insecure as the password
 
 2. Setup the build environment: e.g. `export GOBIN=/Users/matt/go-workspace/bin GOPATH=/Users/matt/go-workspace && mkdir $GOPATH`
 
-2. Install the compile-time dependencies: `cd $GOPATH && git clone https://github.com/go-sql-driver/mysql src/github.com/go-sql-driver/mysql`
+2. Install the compile-time dependencies: `go get "github.com/go-sql-driver/mysql"`
 
-3. Checkout the source: `cd $GOPATH && git clone https://github.com/mattlord/myarbitratord src/github.com/mattlord/myarbitratord/`
+3. Checkout the source: `go get "github.com/mattlord/myarbitratord"`
 
 4. Build it: `cd $GOPATH/src/github.com/mattlord/myarbitratord && go install myarbitratord.go` (compiles myarbitratord and places binary in $GOBIN)
 
