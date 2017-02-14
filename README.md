@@ -32,6 +32,9 @@ Specifying the MySQL credentials on the command-line is insecure as the password
 }
 ```
 
+**Note that the RESTful API currently has not authentication mechanism!**
+
+
 ## Installation:
 1. Install golang: https://golang.org/doc/install
 
@@ -71,4 +74,75 @@ DEBUG: 2017/02/14 12:25:04 myarbitratord.go:219: Seed node details: &{Mysql_host
 ...
 ```
 
+## RESTful API Examples:
+```
+"/"
 
+Welcome to the MySQL Arbitrator's RESTful API handler!
+
+The available API calls are:
+/stats: Provide runtime and operational stats
+
+```
+
+---
+
+```
+"/stats"
+{
+    "Started": "Tue, 14 Feb 2017 13:05:09 EST",
+    "Uptime": "4.722337196s",
+    "Loops": 2,
+    "Partitions": 0,
+    "Current Seed Node": {
+        "Mysql_host": "hanode2",
+        "Mysql_port": "3306",
+        "Mysql_user": "root",
+        "Group_name": "550fa9ee-a1f8-4b6d-9bfe-c03c12cd1c72",
+        "Server_uuid": "39a07a39-4b82-44d2-a3cd-978511564a57",
+        "Member_state": "ONLINE",
+        "Online_participants": 3,
+        "Has_quorum": true,
+        "Read_only": false,
+        "Applier_queue_size": 0
+    },
+    "Last Membership View": [
+        {
+            "Mysql_host": "hanode2",
+            "Mysql_port": "3306",
+            "Mysql_user": "root",
+            "Group_name": "",
+            "Server_uuid": "39a07a39-4b82-44d2-a3cd-978511564a57",
+            "Member_state": "ONLINE",
+            "Online_participants": 0,
+            "Has_quorum": false,
+            "Read_only": false,
+            "Applier_queue_size": 0
+        },
+        {
+            "Mysql_host": "hanode3",
+            "Mysql_port": "3306",
+            "Mysql_user": "root",
+            "Group_name": "",
+            "Server_uuid": "49311a3a-e058-46ba-8e7b-857b5db7d33f",
+            "Member_state": "ONLINE",
+            "Online_participants": 0,
+            "Has_quorum": false,
+            "Read_only": false,
+            "Applier_queue_size": 0
+        },
+        {
+            "Mysql_host": "hanode4",
+            "Mysql_port": "3306",
+            "Mysql_user": "root",
+            "Group_name": "",
+            "Server_uuid": "de6858e8-0669-4b82-a188-d2906daa6d91",
+            "Member_state": "ONLINE",
+            "Online_participants": 0,
+            "Has_quorum": false,
+            "Read_only": false,
+            "Applier_queue_size": 0
+        }
+    ]
+}
+```
