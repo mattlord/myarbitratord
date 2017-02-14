@@ -49,7 +49,7 @@ Specifying the MySQL credentials on the command-line is insecure as the password
 ## Example:
 ```
 gonzo:myarbitratord matt$ $GOBIN/myarbitratord -seed_host="hanode2" -mysql_auth_file="/Users/matt/.my.json" -debug 
-INFO: 2017/02/14 12:25:02 myarbitratord.go:119: Starting HTTP server for RESTful stats information on port 8099
+INFO: 2017/02/14 12:25:02 myarbitratord.go:119: Starting HTTP server for RESTful API on port 8099
 DEBUG: 2017/02/14 12:25:02 myarbitratord.go:128: Reading MySQL credentials from file: /Users/matt/.my.json
 DEBUG: 2017/02/14 12:25:02 myarbitratord.go:141: Unmarshaled mysql auth file contents: {User:root Password:xxxxx}
 DEBUG: 2017/02/14 12:25:02 myarbitratord.go:153: Read mysql auth info from file. user: root, password: xxxxx
