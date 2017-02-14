@@ -85,8 +85,6 @@ The available API calls are:
 
 ```
 
----
-
 ```
 "/stats"
 
