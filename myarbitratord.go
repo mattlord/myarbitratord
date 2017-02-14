@@ -41,9 +41,8 @@ var DebugLog = log.New( os.Stderr,
                "DEBUG: ",
                log.Ldate|log.Ltime|log.Lshortfile )
 
-// This is where I'll store all operating status metrics, presented as JSON via HTTP 
+// This is where I'll store all operating status metrics, presented as JSON via the "/stats" HTTP API call 
 type stats struct {
-  // This will really be the process start time that I can then use to display the uptime 
   Start_time string			`json:"Started"`
   Uptime string				`json:"Uptime"`
   Loops  uint				`json:"Loops"`
