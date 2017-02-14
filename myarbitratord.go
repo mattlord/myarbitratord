@@ -49,7 +49,7 @@ type stats struct {
   Loops  uint		`json:"Loops"`
   Partitions uint	`json:"Partitions"`
 }
-var mystats = stats{ Start_time: time.Now().String(), Loops: 0, Partitions: 0 }
+var mystats = stats{ Start_time: time.Now().Format(time.RFC1123), Loops: 0, Partitions: 0 }
 
 // This will simply note the available API calls
 func defaultHandler( httpW http.ResponseWriter, httpR *http.Request ){
@@ -66,8 +66,12 @@ func statsHandler( httpW http.ResponseWriter, httpR *http.Request ){
     DebugLog.Printf( "Handling HTTP request for stats. Current stats are: %+v\n", mystats )
   }
 
-  tval, _ := time.Parse( mystats.Start_time, mystats.Start_time )
-  mystats.Uptime = tval.String()
+  tval, terr := time.Parse( time.RFC1123, mystats.Start_time )
+  if( terr != nil ){
+    InfoLog.Printf( "Error parsing time value for stats: %+v\n", terr )
+  }
+  dval := time.Since( tval )
+  mystats.Uptime = dval.String()
 
   statsJSON, err := json.Marshal( &mystats )
 
