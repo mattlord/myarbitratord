@@ -213,7 +213,6 @@ func MonitorCluster( seed_node *instances.Instance ) error {
     }
 
     // save this view in case the seed node is no longer valid next time 
-    //last_view = copy( last_view, members[:] )
     last_view = *members
 
     quorum, err := seed_node.HasQuorum()

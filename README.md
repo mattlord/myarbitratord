@@ -32,7 +32,7 @@ Specifying the MySQL credentials on the command-line is insecure as the password
 }
 ```
 
-**Note:** _The the RESTful API currently has not authentication mechanism_
+**Note:** _The RESTful API currently has not authentication mechanism_
 
 
 ## Installation:
