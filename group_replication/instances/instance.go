@@ -17,13 +17,13 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 package instances
 
 import (
-  "database/sql"
-  _ "github.com/go-sql-driver/mysql"
+  "os"
+  "log"
   "errors"
   "strings"
   "strconv"
-  "log"
-  "os"
+  "database/sql"
+  _ "github.com/go-sql-driver/mysql"
 )
 
 // member variables that start with capital letters are public/exported 
@@ -300,6 +300,16 @@ func (me *Instance) ForceMembers( fms string ) error {
 
   if( err == nil ){
     _, err = me.db.Exec( force_membership_query )
+  }
+
+  return err
+}
+
+func (me *Instance) Cleanup() error {
+  var err error = nil
+
+  if( me.db != nil ){
+    err = me.db.Close()
   }
 
   return err

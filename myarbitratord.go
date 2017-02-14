@@ -27,6 +27,8 @@ import (
   "net/http"
   "io/ioutil"
   "encoding/json"
+  // uncomment the next line to add profiling to the binary, available via "/debug/pprof" in the RESTful API 
+  // _ "net/http/pprof"
   "github.com/mattlord/myarbitratord/group_replication/instances"
 )
 
@@ -95,9 +97,8 @@ func main(){
     Password string  `json:"password"`
   }
   // let's start a thread to handle the RESTful API calls
-  serverMux := http.NewServeMux()
-  serverMux.HandleFunc( "/", defaultHandler )
-  serverMux.HandleFunc( "/stats", statsHandler )
+  http.DefaultServeMux.HandleFunc( "/", defaultHandler )
+  http.DefaultServeMux.HandleFunc( "/stats", statsHandler )
   var http_port string = "8099"
 
   flag.StringVar( &seed_host, "seed_host", "", "IP/Hostname of the seed node used to start monitoring the Group Replication cluster (Required Parameter!)" )
@@ -122,7 +123,7 @@ func main(){
   }
 
   InfoLog.Printf( "Starting HTTP server for RESTful API on port %s\n", http_port )
-  go http.ListenAndServe( ":" + http_port, serverMux )
+  go http.ListenAndServe( ":" + http_port, http.DefaultServeMux )
 
   if( debug ){
     instances.Debug = true
@@ -186,8 +187,8 @@ func MonitorCluster( seed_node *instances.Instance ) error {
     mystats.Last_view = &last_view
 
     // let's check the status of the current seed node
-    // if the seed node 
     err = seed_node.Connect()
+    defer seed_node.Cleanup()
   
     if( err != nil || seed_node.Member_state != "ONLINE" ){
       // if we couldn't connect to the current seed node or it's no longer part of the group
