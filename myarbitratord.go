@@ -44,12 +44,14 @@ var DebugLog = log.New( os.Stderr,
 // This is where I'll store all operating status metrics, presented as JSON via HTTP 
 type stats struct {
   // This will really be the process start time that I can then use to display the uptime 
-  Start_time string	`json:"Started"`
-  Uptime string		`json:"Uptime"`
-  Loops  uint		`json:"Loops"`
-  Partitions uint	`json:"Partitions"`
+  Start_time string			`json:"Started"`
+  Uptime string				`json:"Uptime"`
+  Loops  uint				`json:"Loops"`
+  Partitions uint			`json:"Partitions"`
+  Current_seed *instances.Instance	`json:"Current Seed Node"`
+  Last_view *[]instances.Instance	`json:"Last Membership View"`
 }
-var mystats = stats{ Start_time: time.Now().Format(time.RFC1123), Loops: 0, Partitions: 0 }
+var mystats = stats{ Start_time: time.Now().Format(time.RFC1123), Loops: 0, Partitions: 0, }
 
 // This will simply note the available API calls
 func defaultHandler( httpW http.ResponseWriter, httpR *http.Request ){
@@ -73,7 +75,7 @@ func statsHandler( httpW http.ResponseWriter, httpR *http.Request ){
   dval := time.Since( tval )
   mystats.Uptime = dval.String()
 
-  statsJSON, err := json.Marshal( &mystats )
+  statsJSON, err := json.MarshalIndent( &mystats, "", "    " )
 
   if( err != nil ){
     InfoLog.Printf( "Error handling HTTP request for stats: %+v\n", err )
@@ -181,6 +183,8 @@ func MonitorCluster( seed_node *instances.Instance ) error {
   
   for( loop == true ){
     mystats.Loops = mystats.Loops + 1
+    mystats.Current_seed = seed_node
+    mystats.Last_view = &last_view
 
     // let's check the status of the current seed node
     // if the seed node 
