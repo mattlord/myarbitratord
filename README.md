@@ -23,18 +23,6 @@ Usage of myarbitratord:
     	Port of the seed node used to start monitoring the Group Replication cluster (default "3306")
 ```
 
-## Security:
-Specifying the MySQL credentials on the command-line is insecure as the password is visible in the processlist output and elsewhere. The recommended way to specify the MySQL credentials is using a JSON file which can then be protected at the filesystem level. The format of that JSON file should be:
-```json
-{
-  "user": "myser",
-  "password": "mypass"
-}
-```
-
-**Note:** _The RESTful API currently has not authentication mechanism_
-
-
 ## Installation:
 1. Install golang: https://golang.org/doc/install
 
@@ -47,6 +35,18 @@ Specifying the MySQL credentials on the command-line is insecure as the password
 4. Build it: `cd $GOPATH/src/github.com/mattlord/myarbitratord && go install myarbitratord.go` (compiles myarbitratord and places binary in $GOBIN)
 
 5. Run it: `$GOBIN/myarbitratord -help`
+
+
+## Security:
+Specifying the MySQL credentials on the command-line is insecure as the password is visible in the processlist output and elsewhere. The recommended way to specify the MySQL credentials is using a JSON file which can then be protected at the filesystem level. The format of that JSON file should be:
+```json
+{
+  "user": "myser",
+  "password": "mypass"
+}
+```
+
+**Note:** _The RESTful API currently has not authentication mechanism_
 
 
 ## Example:
