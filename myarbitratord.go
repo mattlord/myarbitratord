@@ -97,7 +97,7 @@ func main(){
     User string      `json:"user"`
     Password string  `json:"password"`
   }
-  // let's start a thread to handle the RESTful API calls
+
   http.DefaultServeMux.HandleFunc( "/", defaultHandler )
   http.DefaultServeMux.HandleFunc( "/stats", statsHandler )
   var http_port string = "8099"
@@ -123,6 +123,7 @@ func main(){
     os.Exit( 1 )
   }
 
+  // let's start a thread to handle the RESTful API calls
   InfoLog.Printf( "Starting HTTP server for RESTful API on port %s\n", http_port )
   go http.ListenAndServe( ":" + http_port, http.DefaultServeMux )
 
@@ -164,7 +165,6 @@ func main(){
   InfoLog.Println( "Welcome to the MySQL Group Replication Arbitrator!" )
 
   InfoLog.Printf( "Starting operations from seed node: '%s:%s'\n", seed_host, seed_port )
-
   seed_node := instances.New( seed_host, seed_port, mysql_user, mysql_pass )
   err := MonitorCluster( seed_node )
   
