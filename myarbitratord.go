@@ -386,6 +386,7 @@ func MonitorCluster( seed_node *instances.Instance ) error {
 
 
 // The remaining functions are used to sort our membership slice
+// We'll never have a super high number of nodes involved, so a simple bubble sort will suffice
 func (a MembersByOnlineNodes) Len() int {
   return len(a)
 }
