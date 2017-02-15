@@ -201,10 +201,10 @@ func (me *Instance) TransactionsExecuted() (string, error) {
   return gtids, err
 }
 
-func (me *Instance) TransactionsExecutedCount() (int, error) {
+func (me *Instance) TransactionsExecutedCount() (uint64, error) {
   var err error
   var gtid_set string
-  var cnt int
+  var cnt uint64
 
   gtid_set, err = me.TransactionsExecuted()
 
@@ -215,9 +215,9 @@ func (me *Instance) TransactionsExecutedCount() (int, error) {
   return cnt, err
 }
 
-func (me *Instance) ApplierQueueLength() (int, error) {
+func (me *Instance) ApplierQueueLength() (uint64, error) {
   // since this is such a fast changing metric, I won't cache the value in the struct
-  var qlen int
+  var qlen uint64
   var gtid_subset string
   gtid_subset_query := "SELECT GTID_SUBTRACT( (SELECT Received_transaction_set FROM performance_schema.replication_connection_status WHERE Channel_name = 'group_replication_applier' ), (SELECT @@global.GTID_EXECUTED) )"
 
@@ -245,78 +245,75 @@ func (me *Instance) ApplierQueueLength() (int, error) {
 de6858e8-0669-4b82-a188-d2906daa6d91:1-119927"
 With the total transaction count for that set being: 2252719
 */
-func TransactionCount( gtid_set string ) (int, error) {  
+func TransactionCount( gtid_set string ) (uint64, error) {  
   var err error
-  gtid_count := 0 
+  var gtid_count uint64 = 0 
+  next_dash_pos := 0
+  next_colon_pos := 0
+  next_comma_pos := 0
+  colon_pos := strings.IndexRune( gtid_set, ':' )
 
-  if( err == nil ){
-    if( Debug ){
-      DebugLog.Printf( "Calculating total number of GTIDs from a set of: %s\n", gtid_set )
-    }
+  if( Debug ){
+    DebugLog.Printf( "Calculating total number of GTIDs from a set of: %s\n", gtid_set )
+  }
 
-    next_dash_pos := 0
-    next_colon_pos := 0
-    next_comma_pos := 0
-    colon_pos := strings.IndexRune( gtid_set, ':' )
-
-    for colon_pos != -1 { 
-      // lets get rid of everything before the current colon, and the colon itself, as it's UUID info that we don't care about
-      gtid_set = gtid_set[colon_pos+1:]
+  for colon_pos != -1 { 
+    // lets get rid of everything before the current colon, and the colon itself, as it's UUID info that we don't care about
+    gtid_set = gtid_set[colon_pos+1:]
        
-      next_dash_pos = strings.IndexRune( gtid_set, '-' )
-      next_colon_pos = strings.IndexRune( gtid_set, ':' )
-      next_comma_pos = strings.IndexRune( gtid_set, ',' )
+    next_dash_pos = strings.IndexRune( gtid_set, '-' )
+    next_colon_pos = strings.IndexRune( gtid_set, ':' )
+    next_comma_pos = strings.IndexRune( gtid_set, ',' )
        
-      firstval := 0
-      secondval := 0
-      nextval := 0
+    firstval := 0
+    secondval := 0
+    nextval := 0
 
-      if( next_dash_pos < next_colon_pos && next_dash_pos < next_comma_pos ){
-        if( next_colon_pos < next_comma_pos ){
-          firstval, err = strconv.Atoi( gtid_set[:next_dash_pos] )
-          secondval, err = strconv.Atoi( gtid_set[next_dash_pos+1 : next_colon_pos] )
-
-          // the first GTID counts too 
-          firstval = firstval-1
-
-          nextval = secondval - firstval
-        } else {
-          firstval, err = strconv.Atoi( gtid_set[:next_dash_pos] )
-          secondval, err = strconv.Atoi( gtid_set[next_dash_pos+1 : next_comma_pos] )
-
-          // the first GTID counts too 
-          firstval = firstval-1
-
-          nextval = secondval - firstval
-        }
-      } else if( next_colon_pos == -1 && next_dash_pos != -1 ){
+    if( next_dash_pos < next_colon_pos && next_dash_pos < next_comma_pos ){
+      if( next_colon_pos < next_comma_pos ){
         firstval, err = strconv.Atoi( gtid_set[:next_dash_pos] )
-        secondval, err = strconv.Atoi( gtid_set[next_dash_pos+1:] )
+        secondval, err = strconv.Atoi( gtid_set[next_dash_pos+1 : next_colon_pos] )
 
         // the first GTID counts too 
         firstval = firstval-1
 
         nextval = secondval - firstval
       } else {
-        nextval = 1
+        firstval, err = strconv.Atoi( gtid_set[:next_dash_pos] )
+        secondval, err = strconv.Atoi( gtid_set[next_dash_pos+1 : next_comma_pos] )
+
+        // the first GTID counts too 
+        firstval = firstval-1
+
+        nextval = secondval - firstval
       }
+    } else if( next_colon_pos == -1 && next_dash_pos != -1 ){
+      firstval, err = strconv.Atoi( gtid_set[:next_dash_pos] )
+      secondval, err = strconv.Atoi( gtid_set[next_dash_pos+1:] )
 
-      if( err != nil ){
-        break
-      }
+      // the first GTID counts too 
+      firstval = firstval-1
 
-      if( Debug ){
-        DebugLog.Printf( "The current calculation is: (%d - %d)\n", secondval, firstval )
-        DebugLog.Printf( "Current total: %d, adding %d\n", gtid_count, nextval )
-      }
+      nextval = secondval - firstval
+    } else {
+      nextval = 1
+    }
 
-      gtid_count = gtid_count + nextval
+    if( err != nil ){
+      break
+    }
 
-      colon_pos = strings.IndexRune( gtid_set, ':' )
+    if( Debug ){
+      DebugLog.Printf( "The current calculation is: (%d - %d)\n", secondval, firstval )
+      DebugLog.Printf( "Current total: %d, adding %d\n", gtid_count, nextval )
+    }
 
-      if( Debug ){
-        DebugLog.Printf( "Remaining unprocessed GTID string: %s\n", gtid_set )
-      }
+    gtid_count = gtid_count + uint64(nextval)
+
+    colon_pos = strings.IndexRune( gtid_set, ':' )
+
+    if( Debug ){
+      DebugLog.Printf( "Remaining unprocessed GTID string: %s\n", gtid_set )
     }
   }             
          
