@@ -252,6 +252,9 @@ func TransactionCount( gtid_set string ) (uint64, error) {
   next_colon_pos := 0
   next_comma_pos := 0
   colon_pos := strings.IndexRune( gtid_set, ':' )
+  var firstval uint64 = 0
+  var secondval uint64 = 0
+  var nextval uint64 = 0
 
   if( Debug ){
     DebugLog.Printf( "Calculating total number of GTIDs from a set of: %s\n", gtid_set )
@@ -265,22 +268,22 @@ func TransactionCount( gtid_set string ) (uint64, error) {
     next_colon_pos = strings.IndexRune( gtid_set, ':' )
     next_comma_pos = strings.IndexRune( gtid_set, ',' )
        
-    firstval := 0
-    secondval := 0
-    nextval := 0
+    firstval = 0
+    secondval = 0
+    nextval = 0
 
     if( next_dash_pos < next_colon_pos && next_dash_pos < next_comma_pos ){
       if( next_colon_pos < next_comma_pos ){
-        firstval, err = strconv.Atoi( gtid_set[:next_dash_pos] )
-        secondval, err = strconv.Atoi( gtid_set[next_dash_pos+1 : next_colon_pos] )
+        firstval, err = strconv.ParseUint( gtid_set[:next_dash_pos], 10, 64 )
+        secondval, err = strconv.ParseUint( gtid_set[next_dash_pos+1 : next_colon_pos], 10, 64 )
 
         // the first GTID counts too 
         firstval = firstval-1
 
         nextval = secondval - firstval
       } else {
-        firstval, err = strconv.Atoi( gtid_set[:next_dash_pos] )
-        secondval, err = strconv.Atoi( gtid_set[next_dash_pos+1 : next_comma_pos] )
+        firstval, err = strconv.ParseUint( gtid_set[:next_dash_pos], 10, 64 )
+        secondval, err = strconv.ParseUint( gtid_set[next_dash_pos+1 : next_comma_pos], 10, 64 )
 
         // the first GTID counts too 
         firstval = firstval-1
@@ -288,8 +291,8 @@ func TransactionCount( gtid_set string ) (uint64, error) {
         nextval = secondval - firstval
       }
     } else if( next_colon_pos == -1 && next_dash_pos != -1 ){
-      firstval, err = strconv.Atoi( gtid_set[:next_dash_pos] )
-      secondval, err = strconv.Atoi( gtid_set[next_dash_pos+1:] )
+      firstval, err = strconv.ParseUint( gtid_set[:next_dash_pos], 10, 64 )
+      secondval, err = strconv.ParseUint( gtid_set[next_dash_pos+1:], 10, 64 )
 
       // the first GTID counts too 
       firstval = firstval-1
@@ -308,7 +311,7 @@ func TransactionCount( gtid_set string ) (uint64, error) {
       DebugLog.Printf( "Current total: %d, adding %d\n", gtid_count, nextval )
     }
 
-    gtid_count = gtid_count + uint64(nextval)
+    gtid_count = gtid_count + nextval
 
     colon_pos = strings.IndexRune( gtid_set, ':' )
 
