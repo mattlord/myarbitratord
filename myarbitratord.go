@@ -27,7 +27,8 @@ import (
   "net/http"
   "io/ioutil"
   "encoding/json"
-  // uncomment the next line to add profiling to the binary, available via "/debug/pprof" in the RESTful API 
+  // uncomment the next import to add profiling to the binary, available via "/debug/pprof" in the RESTful API 
+  // see: http://blog.ralch.com/tutorial/golang-performance-and-memory-analysis/
   // _ "net/http/pprof"
   "github.com/mattlord/myarbitratord/group_replication/instances"
 )
@@ -196,11 +197,13 @@ func MonitorCluster( seed_node *instances.Instance ) error {
       InfoLog.Println( "Attempting to get a new seed node..." )
 
       for i := 0; i < len(last_view); i++ {
-        err = last_view[i].Connect()
-        if( err == nil && last_view[i].Member_state == "ONLINE" ){
-          seed_node = &last_view[i]
-          InfoLog.Printf( "Updated seed node! New seed node is: '%s:%s'\n", seed_node.Mysql_host, seed_node.Mysql_port ) 
-          break
+        if( seed_node != &last_view[i] ){
+          err = last_view[i].Connect()
+          if( err == nil && last_view[i].Member_state == "ONLINE" ){
+            seed_node = &last_view[i]
+            InfoLog.Printf( "Updated seed node! New seed node is: '%s:%s'\n", seed_node.Mysql_host, seed_node.Mysql_port ) 
+            break
+          }
         }
       }
     }
