@@ -237,7 +237,7 @@ func (me *Instance) ApplierQueueLength() (uint64, error) {
 }
 
 /* 
- We need to count all of the GTIDs in total
+ This is a global function to count a total of all the GTIDs in a set
  An example set being:
 "39a07a39-4b82-44d2-a3cd-978511564a57:1-37,
 49311a3a-e058-46ba-8e7b-857b5db7d33f:1,
