@@ -62,15 +62,15 @@ DEBUG: 2017/02/14 12:25:02 instance.go:67: Making SQL connection using: root:xxx
 DEBUG: 2017/02/14 12:25:02 instance.go:83: Checking group name on 'hanode2:3306'. Query: SELECT variable_value FROM global_variables WHERE variable_name='group_replication_group_name'
 DEBUG: 2017/02/14 12:25:02 instance.go:95: Checking status of 'hanode2:3306'. Query: SELECT variable_value, member_state FROM global_variables gv INNER JOIN replication_group_members rgm ON(gv.variable_value=rgm.member_id) WHERE gv.variable_name='server_uuid'
 DEBUG: 2017/02/14 12:25:02 instance.go:142: Getting group members from 'hanode2:3306'. Query: SELECT member_id, member_host, member_port, member_state FROM replication_group_members
-DEBUG: 2017/02/14 12:25:02 instance.go:163: Group member info found for 'hanode2:3306' -- ONLINE member count: 3, Members: [{Mysql_host:hanode2 Mysql_port:3306 Mysql_user:root mysql_pass:xxxxx Group_name: Server_uuid:39a07a39-4b82-44d2-a3cd-978511564a57 Member_state:ONLINE Online_participants:0 Has_quorum:false Read_only:false Applier_queue_size:0 db:<nil>} {Mysql_host:hanode3 Mysql_port:3306 Mysql_user:root mysql_pass:xxxxx Group_name: Server_uuid:49311a3a-e058-46ba-8e7b-857b5db7d33f Member_state:ONLINE Online_participants:0 Has_quorum:false Read_only:false Applier_queue_size:0 db:<nil>} {Mysql_host:hanode4 Mysql_port:3306 Mysql_user:root mysql_pass:xxxxx Group_name: Server_uuid:de6858e8-0669-4b82-a188-d2906daa6d91 Member_state:ONLINE Online_participants:0 Has_quorum:false Read_only:false Applier_queue_size:0 db:<nil>}]
+DEBUG: 2017/02/14 12:25:02 instance.go:163: Group member info found for 'hanode2:3306' -- ONLINE member count: 3, Members: [{Mysql_host:hanode2 Mysql_port:3306 Mysql_user:root mysql_pass:xxxxx Group_name: Server_uuid:39a07a39-4b82-44d2-a3cd-978511564a57 Member_state:ONLINE Online_participants:0 Has_quorum:false Read_only:false db:<nil>} {Mysql_host:hanode3 Mysql_port:3306 Mysql_user:root mysql_pass:xxxxx Group_name: Server_uuid:49311a3a-e058-46ba-8e7b-857b5db7d33f Member_state:ONLINE Online_participants:0 Has_quorum:false Read_only:false db:<nil>} {Mysql_host:hanode4 Mysql_port:3306 Mysql_user:root mysql_pass:xxxxx Group_name: Server_uuid:de6858e8-0669-4b82-a188-d2906daa6d91 Member_state:ONLINE Online_participants:0 Has_quorum:false Read_only:false db:<nil>}]
 DEBUG: 2017/02/14 12:25:02 instance.go:108: Checking if 'hanode2:3306' has a quorum. Query: SELECT IF( MEMBER_STATE='ONLINE' AND ((SELECT COUNT(*) FROM replication_group_members WHERE MEMBER_STATE != 'ONLINE') >= ((SELECT COUNT(*) FROM replication_group_members)/2) = 0), 'true', 'false' ) FROM replication_group_members JOIN replication_group_member_stats USING(member_id)
-DEBUG: 2017/02/14 12:25:02 myarbitratord.go:219: Seed node details: &{Mysql_host:hanode2 Mysql_port:3306 Mysql_user:root mysql_pass:xxxxx Group_name:550fa9ee-a1f8-4b6d-9bfe-c03c12cd1c72 Server_uuid:39a07a39-4b82-44d2-a3cd-978511564a57 Member_state:ONLINE Online_participants:3 Has_quorum:true Read_only:false Applier_queue_size:0 db:0xc4200be370}
+DEBUG: 2017/02/14 12:25:02 myarbitratord.go:219: Seed node details: &{Mysql_host:hanode2 Mysql_port:3306 Mysql_user:root mysql_pass:xxxxx Group_name:550fa9ee-a1f8-4b6d-9bfe-c03c12cd1c72 Server_uuid:39a07a39-4b82-44d2-a3cd-978511564a57 Member_state:ONLINE Online_participants:3 Has_quorum:true Read_only:false db:0xc4200be370}
 DEBUG: 2017/02/14 12:25:04 instance.go:83: Checking group name on 'hanode2:3306'. Query: SELECT variable_value FROM global_variables WHERE variable_name='group_replication_group_name'
 DEBUG: 2017/02/14 12:25:04 instance.go:95: Checking status of 'hanode2:3306'. Query: SELECT variable_value, member_state FROM global_variables gv INNER JOIN replication_group_members rgm ON(gv.variable_value=rgm.member_id) WHERE gv.variable_name='server_uuid'
 DEBUG: 2017/02/14 12:25:04 instance.go:142: Getting group members from 'hanode2:3306'. Query: SELECT member_id, member_host, member_port, member_state FROM replication_group_members
-DEBUG: 2017/02/14 12:25:04 instance.go:163: Group member info found for 'hanode2:3306' -- ONLINE member count: 3, Members: [{Mysql_host:hanode2 Mysql_port:3306 Mysql_user:root mysql_pass:xxxxx Group_name: Server_uuid:39a07a39-4b82-44d2-a3cd-978511564a57 Member_state:ONLINE Online_participants:0 Has_quorum:false Read_only:false Applier_queue_size:0 db:<nil>} {Mysql_host:hanode3 Mysql_port:3306 Mysql_user:root mysql_pass:xxxxx Group_name: Server_uuid:49311a3a-e058-46ba-8e7b-857b5db7d33f Member_state:ONLINE Online_participants:0 Has_quorum:false Read_only:false Applier_queue_size:0 db:<nil>} {Mysql_host:hanode4 Mysql_port:3306 Mysql_user:root mysql_pass:xxxxx Group_name: Server_uuid:de6858e8-0669-4b82-a188-d2906daa6d91 Member_state:ONLINE Online_participants:0 Has_quorum:false Read_only:false Applier_queue_size:0 db:<nil>}]
+DEBUG: 2017/02/14 12:25:04 instance.go:163: Group member info found for 'hanode2:3306' -- ONLINE member count: 3, Members: [{Mysql_host:hanode2 Mysql_port:3306 Mysql_user:root mysql_pass:xxxxx Group_name: Server_uuid:39a07a39-4b82-44d2-a3cd-978511564a57 Member_state:ONLINE Online_participants:0 Has_quorum:false Read_only:false db:<nil>} {Mysql_host:hanode3 Mysql_port:3306 Mysql_user:root mysql_pass:xxxxx Group_name: Server_uuid:49311a3a-e058-46ba-8e7b-857b5db7d33f Member_state:ONLINE Online_participants:0 Has_quorum:false Read_only:false db:<nil>} {Mysql_host:hanode4 Mysql_port:3306 Mysql_user:root mysql_pass:xxxxx Group_name: Server_uuid:de6858e8-0669-4b82-a188-d2906daa6d91 Member_state:ONLINE Online_participants:0 Has_quorum:false Read_only:false db:<nil>}]
 DEBUG: 2017/02/14 12:25:04 instance.go:108: Checking if 'hanode2:3306' has a quorum. Query: SELECT IF( MEMBER_STATE='ONLINE' AND ((SELECT COUNT(*) FROM replication_group_members WHERE MEMBER_STATE != 'ONLINE') >= ((SELECT COUNT(*) FROM replication_group_members)/2) = 0), 'true', 'false' ) FROM replication_group_members JOIN replication_group_member_stats USING(member_id)
-DEBUG: 2017/02/14 12:25:04 myarbitratord.go:219: Seed node details: &{Mysql_host:hanode2 Mysql_port:3306 Mysql_user:root mysql_pass:xxxxx Group_name:550fa9ee-a1f8-4b6d-9bfe-c03c12cd1c72 Server_uuid:39a07a39-4b82-44d2-a3cd-978511564a57 Member_state:ONLINE Online_participants:3 Has_quorum:true Read_only:false Applier_queue_size:0 db:0xc4200be370}
+DEBUG: 2017/02/14 12:25:04 myarbitratord.go:219: Seed node details: &{Mysql_host:hanode2 Mysql_port:3306 Mysql_user:root mysql_pass:xxxxx Group_name:550fa9ee-a1f8-4b6d-9bfe-c03c12cd1c72 Server_uuid:39a07a39-4b82-44d2-a3cd-978511564a57 Member_state:ONLINE Online_participants:3 Has_quorum:true Read_only:false db:0xc4200be370}
 ...
 ```
 
@@ -102,7 +102,6 @@ gonzo:~ matt$ curl http://localhost:8099/stats
         "Online_participants": 3,
         "Has_quorum": true,
         "Read_only": false,
-        "Applier_queue_size": 0
     },
     "Last Membership View": [
         {
@@ -115,7 +114,6 @@ gonzo:~ matt$ curl http://localhost:8099/stats
             "Online_participants": 0,
             "Has_quorum": false,
             "Read_only": false,
-            "Applier_queue_size": 0
         },
         {
             "Mysql_host": "hanode3",
@@ -127,7 +125,6 @@ gonzo:~ matt$ curl http://localhost:8099/stats
             "Online_participants": 0,
             "Has_quorum": false,
             "Read_only": false,
-            "Applier_queue_size": 0
         },
         {
             "Mysql_host": "hanode4",
@@ -139,7 +136,6 @@ gonzo:~ matt$ curl http://localhost:8099/stats
             "Online_participants": 0,
             "Has_quorum": false,
             "Read_only": false,
-            "Applier_queue_size": 0
         }
     ]
 }

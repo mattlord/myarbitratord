@@ -40,7 +40,6 @@ type Instance struct {
   Online_participants uint8
   Has_quorum bool
   Read_only bool
-  Applier_queue_size uint16
   db *sql.DB
 }
 
@@ -202,6 +201,41 @@ func (me *Instance) TransactionsExecuted() (string, error) {
   return gtids, err
 }
 
+func (me *Instance) TransactionsExecutedCount() (int, error) {
+  var err error
+  var gtid_set string
+  var cnt int
+
+  gtid_set, err = me.TransactionsExecuted()
+
+  if( err != nil ){
+    cnt, err = TransactionCount( gtid_set )
+  }
+
+  return cnt, err
+}
+
+func (me *Instance) ApplierQueueLength() (int, error) {
+  // since this is such a fast changing metric, I won't cache the value in the struct
+  var qlen int
+  var gtid_subset string
+  gtid_subset_query := "SELECT GTID_SUBTRACT( (SELECT Received_transaction_set FROM performance_schema.replication_connection_status WHERE Channel_name = 'group_replication_applier' ), (SELECT @@global.GTID_EXECUTED) )"
+
+  if( Debug ){
+    DebugLog.Printf( "Getting the applier queue length on '%s:%s'\n", me.Mysql_host, me.Mysql_port )
+  }
+
+  err := me.db.Ping()
+
+  if( err == nil ){
+    err = me.db.QueryRow( gtid_subset_query ).Scan( &gtid_subset )
+  }
+
+  qlen, err = TransactionCount( gtid_subset )
+
+  return qlen, err
+}
+
 /* 
  We need to count all of the GTIDs in total
  An example set being:
@@ -211,8 +245,8 @@ func (me *Instance) TransactionsExecuted() (string, error) {
 de6858e8-0669-4b82-a188-d2906daa6d91:1-119927"
 With the total transaction count for that set being: 2252719
 */
-func (me *Instance) TransactionCount() (int, error) {  
-  gtid_set, err := me.TransactionsExecuted()
+func TransactionCount( gtid_set string ) (int, error) {  
+  var err error
   gtid_count := 0 
 
   if( err == nil ){
