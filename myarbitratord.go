@@ -257,6 +257,7 @@ func MonitorCluster( seed_node *instances.Instance ) error {
       // and connect to the nodes on the losing side(s) of the partition and attempt to shutdown the mysqlds
 
       InfoLog.Println( "Network partition detected! Attempting to handle... " )
+      mystats.Partitions = mystats.Partitions + 1
 
       // does anyone have a quorum? Let's double check before forcing the membership 
       primary_partition := false
