@@ -356,6 +356,7 @@ func (me *Instance) SetReadOnly( ro bool ) error {
 
   if( err == nil ){
     _, err = me.db.Exec( ro_query )
+    me.Read_only = ro
   }
 
   return err 
