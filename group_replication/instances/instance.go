@@ -86,15 +86,19 @@ func (me *Instance) Connect() error {
 
     if( err != nil || me.Group_name == "" ){
       err = errors.New( "Specified MySQL Instance is not a member of any Group Replication cluster!" )
+    } else {
+      query_str = "SELECT variable_value, member_state FROM global_variables gv INNER JOIN replication_group_members rgm ON(gv.variable_value=rgm.member_id) WHERE gv.variable_name='server_uuid'"
+
+      if( Debug ){
+        DebugLog.Printf( "Checking status of '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, query_str )
+      }
+
+      err = me.db.QueryRow( query_str ).Scan( &me.Server_uuid, &me.Member_state )
+
+      if( err == nil ){
+        _, err = me.IsReadOnly()
+      }
     }
-
-    query_str = "SELECT variable_value, member_state FROM global_variables gv INNER JOIN replication_group_members rgm ON(gv.variable_value=rgm.member_id) WHERE gv.variable_name='server_uuid'"
-
-    if( Debug ){
-      DebugLog.Printf( "Checking status of '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, query_str )
-    }
-
-    err = me.db.QueryRow( query_str ).Scan( &me.Server_uuid, &me.Member_state )
   }
   
   return err
