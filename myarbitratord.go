@@ -230,7 +230,7 @@ func MonitorCluster( seed_node *instances.Instance ) error {
     } 
 
     if( quorum ){
-      // Let's try and shutdown the nodes NOT in the primary partition if we can reach them from the arbitrator 
+      // Let's try and shutdown the nodes that the failure detection has just recently flagged
 
       for _, member := range *members {
         if( member.Member_state == "ERROR" || member.Member_state == "UNREACHABLE" ){
