@@ -234,7 +234,7 @@ func MonitorCluster( seed_node *instances.Instance ) error {
 
       for _, member := range *members {
         if( member.Member_state == "ERROR" || member.Member_state == "UNREACHABLE" ){
-          InfoLog.Printf( "Shutting down node that's no longer in the primary partition: '%s:%s'\n", member.Mysql_host, member.Mysql_port )
+          InfoLog.Printf( "Shutting down isolated node: '%s:%s'\n", member.Mysql_host, member.Mysql_port )
           
           err = member.Connect()
 
@@ -245,7 +245,7 @@ func MonitorCluster( seed_node *instances.Instance ) error {
           }
 
           if( err != nil ){
-            InfoLog.Printf( "Could not shutdown instance: '%s:%s'\n", member.Mysql_host, member.Mysql_port )
+            InfoLog.Printf( "Could not shutdown isolated node: '%s:%s'\n", member.Mysql_host, member.Mysql_port )
           }
         } 
       }
