@@ -339,6 +339,50 @@ func (me *Instance) ForceMembers( fms string ) error {
   return err
 }
 
+func (me *Instance) SetReadOnly( ro bool ) error {
+  ro_query := "SET GLOBAL super_read_only=" 
+ 
+  if( ro ){ 
+    ro_query = ro_query + "ON"
+  } else {
+    ro_query = ro_query + "OFF"
+  }
+
+  if( Debug ){
+    DebugLog.Printf( "Setting read_only mode to %b on '%s:%s'\n", ro, me.Mysql_host, me.Mysql_port )
+  }
+
+  err := me.db.Ping()
+
+  if( err == nil ){
+    _, err = me.db.Exec( ro_query )
+  }
+
+  return err 
+}
+
+func (me *Instance) SetOfflineMode( om bool ) error {
+  om_query := "SET GLOBAL offline_mode=" 
+ 
+  if( om ){ 
+    om_query = om_query + "ON"
+  } else {
+    om_query = om_query + "OFF"
+  }
+
+  if( Debug ){
+    DebugLog.Printf( "Setting offline mode to %b on '%s:%s'\n", om, me.Mysql_host, me.Mysql_port )
+  }
+
+  err := me.db.Ping()
+
+  if( err == nil ){
+    _, err = me.db.Exec( om_query )
+  }
+
+  return err 
+}
+
 func (me *Instance) Cleanup() error {
   var err error = nil
 
