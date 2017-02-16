@@ -131,7 +131,7 @@ func (me *Instance) IsReadOnly() (bool, error) {
   err := me.db.Ping()
 
   if( err == nil ){
-    err = me.db.QueryRow( ro_query ).Scan( tmpval )
+    err = me.db.QueryRow( ro_query ).Scan( &tmpval )
     if( tmpval == "ON" ){
       me.Read_only = true
     } else {
