@@ -122,6 +122,7 @@ func (me *Instance) HasQuorum() (bool, error) {
 
 func (me *Instance) IsReadOnly() (bool, error) {
   ro_query := "SELECT variable_value FROM global_variables WHERE variable_name='super_read_only'"
+  tmpval := "unknown" // will be "ON" or "OFF" after query 
 
   if( Debug ){
     DebugLog.Printf( "Checking if '%s:%s' is read only. Query: %s\n", me.Mysql_host, me.Mysql_port, ro_query )
@@ -130,7 +131,12 @@ func (me *Instance) IsReadOnly() (bool, error) {
   err := me.db.Ping()
 
   if( err == nil ){
-    err = me.db.QueryRow( ro_query ).Scan( &me.Read_only )
+    err = me.db.QueryRow( ro_query ).Scan( tmpval )
+    if( tmpval == "ON" ){
+      me.Read_only = true
+    } else {
+      me.Read_only = false
+    }
   }
 
   return me.Read_only, err
