@@ -349,7 +349,7 @@ func (me *Instance) SetReadOnly( ro bool ) error {
   }
 
   if( Debug ){
-    DebugLog.Printf( "Setting read_only mode to %b on '%s:%s'\n", ro, me.Mysql_host, me.Mysql_port )
+    DebugLog.Printf( "Setting read_only mode to %t on '%s:%s'\n", ro, me.Mysql_host, me.Mysql_port )
   }
 
   err := me.db.Ping()
@@ -372,7 +372,7 @@ func (me *Instance) SetOfflineMode( om bool ) error {
   }
 
   if( Debug ){
-    DebugLog.Printf( "Setting offline mode to %b on '%s:%s'\n", om, me.Mysql_host, me.Mysql_port )
+    DebugLog.Printf( "Setting offline mode to %t on '%s:%s'\n", om, me.Mysql_host, me.Mysql_port )
   }
 
   err := me.db.Ping()
