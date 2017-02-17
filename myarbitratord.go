@@ -20,6 +20,7 @@ package main
 import (
   "os"
   "log"
+  "sync"
   "time"
   "flag"
   "sort"
@@ -52,6 +53,7 @@ type stats struct {
   Partitions uint			`json:"Partitions"`
   Current_seed *instances.Instance	`json:"Current Seed Node"`
   Last_view *[]instances.Instance	`json:"Last Membership View"`
+  sync.RWMutex
 }
 var mystats = stats{ Start_time: time.Now().Format(time.RFC1123), Loops: 0, Partitions: 0, }
 
@@ -66,6 +68,8 @@ func defaultHandler( httpW http.ResponseWriter, httpR *http.Request ){
 
 // This will serve the stats via a simple RESTful API
 func statsHandler( httpW http.ResponseWriter, httpR *http.Request ){
+  mystats.RLock()
+
   if( debug ){
     DebugLog.Printf( "Handling HTTP request for stats. Current stats are: %+v\n", mystats )
   }
@@ -84,6 +88,8 @@ func statsHandler( httpW http.ResponseWriter, httpR *http.Request ){
   }
   
   fmt.Fprintf( httpW, "%s", statsJSON )
+
+  mystats.RUnlock()
 }
 
 
@@ -183,9 +189,11 @@ func MonitorCluster( seed_node *instances.Instance ) error {
   last_view := []instances.Instance{}
   
   for( loop == true ){
+    mystats.Lock()
     mystats.Loops = mystats.Loops + 1
     mystats.Current_seed = seed_node
     mystats.Last_view = &last_view
+    mystats.Unlock()
 
     // let's check the status of the current seed node
     err = seed_node.Connect()
@@ -257,7 +265,9 @@ func MonitorCluster( seed_node *instances.Instance ) error {
       // and connect to the nodes on the losing side(s) of the partition and attempt to shutdown the mysqlds
 
       InfoLog.Println( "Network partition detected! Attempting to handle... " )
+      mystats.Lock()
       mystats.Partitions = mystats.Partitions + 1
+      mystats.Unlock()
 
       // does anyone have a quorum? Let's double check before forcing the membership 
       primary_partition := false
