@@ -79,7 +79,12 @@ func statsHandler( httpW http.ResponseWriter, httpR *http.Request ){
     InfoLog.Printf( "Error parsing time value for stats: %+v\n", terr )
   }
   dval := time.Since( tval )
+
+  mystats.RUnlock()
+  mystats.Lock()
   mystats.Uptime = dval.String()
+  mystats.Unlock()
+  mystats.RLock()
 
   statsJSON, err := json.MarshalIndent( &mystats, "", "    " )
 
