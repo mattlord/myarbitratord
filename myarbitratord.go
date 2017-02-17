@@ -295,7 +295,7 @@ func MonitorCluster( seed_node *instances.Instance ) error {
 
         // *BUT*, if there's no clear winner based on sub-partition size, then we should pick the sub-partition (which
         // can be 1 node) that has executed the most GTIDs
-        if( last_view[view_len].Online_participants == last_view[view_len-1].Online_participants ){
+        if( view_len >= 1 && last_view[view_len].Online_participants == last_view[view_len-1].Online_participants ){
           bestmemberpos := view_len
           var bestmembertrxcnt uint64 = 0
           var curtrxcnt uint64 = 0
