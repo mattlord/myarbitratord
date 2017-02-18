@@ -111,7 +111,7 @@ func main(){
 
   http.DefaultServeMux.HandleFunc( "/", defaultHandler )
   http.DefaultServeMux.HandleFunc( "/stats", statsHandler )
-  var http_port string = "8099"
+  http_port := "8099"
 
   flag.StringVar( &seed_host, "seed_host", "", "IP/Hostname of the seed node used to start monitoring the Group Replication cluster (Required Parameter!)" )
   flag.StringVar( &seed_port, "seed_port", "3306", "Port of the seed node used to start monitoring the Group Replication cluster" )

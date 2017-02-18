@@ -86,55 +86,37 @@ The available API calls are:
 ```
 gonzo:~ matt$ curl http://localhost:8099/stats
 {
-    "Started": "Tue, 14 Feb 2017 13:32:02 EST",
-    "Uptime": "17.123650942s",
-    "Loops": 9,
-    "Partitions": 0,
+    "Started": "Fri, 17 Feb 2017 16:03:28 EST",
+    "Uptime": "15h40m50.378786739s",
+    "Loops": 6181,
+    "Partitions": 2,
     "Current Seed Node": {
-        "Mysql_host": "hanode2",
-        "Mysql_port": "3306",
-        "Mysql_user": "root",
-        "Group_name": "550fa9ee-a1f8-4b6d-9bfe-c03c12cd1c72",
-        "Server_uuid": "39a07a39-4b82-44d2-a3cd-978511564a57",
-        "Member_state": "ONLINE",
-        "Online_participants": 3,
-        "Has_quorum": true,
-        "Read_only": false,
+        "MySQL Host": "hanode3",
+        "MySQL Port": "3306",
+        "Group Name": "550fa9ee-a1f8-4b6d-9bfe-c03c12cd1c72",
+        "Server UUID": "49311a3a-e058-46ba-8e7b-857b5db7d33f",
+        "Member State": "ONLINE",
+        "Online Members": 3,
+        "Has Quorum": true
     },
     "Last Membership View": [
         {
-            "Mysql_host": "hanode2",
-            "Mysql_port": "3306",
-            "Mysql_user": "root",
-            "Group_name": "",
-            "Server_uuid": "39a07a39-4b82-44d2-a3cd-978511564a57",
-            "Member_state": "ONLINE",
-            "Online_participants": 0,
-            "Has_quorum": false,
-            "Read_only": false,
+            "MySQL Host": "hanode2",
+            "MySQL Port": "3306",
+            "Server UUID": "39a07a39-4b82-44d2-a3cd-978511564a57",
+            "Member State": "ONLINE"
         },
         {
-            "Mysql_host": "hanode3",
-            "Mysql_port": "3306",
-            "Mysql_user": "root",
-            "Group_name": "",
-            "Server_uuid": "49311a3a-e058-46ba-8e7b-857b5db7d33f",
-            "Member_state": "ONLINE",
-            "Online_participants": 0,
-            "Has_quorum": false,
-            "Read_only": false,
+            "MySQL Host": "hanode3",
+            "MySQL Port": "3306",
+            "Server UUID": "49311a3a-e058-46ba-8e7b-857b5db7d33f",
+            "Member State": "ONLINE"
         },
         {
-            "Mysql_host": "hanode4",
-            "Mysql_port": "3306",
-            "Mysql_user": "root",
-            "Group_name": "",
-            "Server_uuid": "de6858e8-0669-4b82-a188-d2906daa6d91",
-            "Member_state": "ONLINE",
-            "Online_participants": 0,
-            "Has_quorum": false,
-            "Read_only": false,
+            "MySQL Host": "hanode4",
+            "MySQL Port": "3306",
+            "Server UUID": "de6858e8-0669-4b82-a188-d2906daa6d91",
+            "Member State": "ONLINE"
         }
     ]
 }
-```

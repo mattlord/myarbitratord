@@ -28,18 +28,18 @@ import (
 
 // member variables that start with capital letters are public/exported 
 type Instance struct {
-  Mysql_host string 
-  Mysql_port string
-  Mysql_user string
-  mysql_pass string
+  Mysql_host string 		`json:"MySQL Host,omitempty"`
+  Mysql_port string		`json:"MySQL Port,omitempty"`
+  Mysql_user string		`json:"-"`
+  mysql_pass string		`json:"-"`
 
   // The status related vars can serve as an effective cache 
-  Group_name string
-  Server_uuid string
-  Member_state string
-  Online_participants uint8
-  Has_quorum bool
-  Read_only bool
+  Group_name string		`json:"Group Name,omitempty"`	
+  Server_uuid string		`json:"Server UUID,omitempty"`
+  Member_state string		`json:"Member State,omitempty"`
+  Online_participants uint8	`json:"Online Members,omitempty"`
+  Has_quorum bool		`json:"Has Quorum,omitempty"`
+  Read_only bool		`json:"Read Only,omitempty"`
   db *sql.DB
 }
 
