@@ -258,7 +258,7 @@ func MonitorCluster( seed_node *group.Node ) error {
           }
 
           if( err != nil ){
-            InfoLog.Printf( "Could not shutdown instance: '%s:%s'\n", member.Mysql_host, member.Mysql_port )
+            InfoLog.Printf( "Could not shutdown node: '%s:%s'\n", member.Mysql_host, member.Mysql_port )
           }
         } 
       }
@@ -380,7 +380,7 @@ func MonitorCluster( seed_node *group.Node ) error {
               }
 
               if( err != nil ){
-                InfoLog.Printf( "Could not shutdown instance: '%s:%s'\n", member.Mysql_host, member.Mysql_port )
+                InfoLog.Printf( "Could not shutdown node: '%s:%s'\n", member.Mysql_host, member.Mysql_port )
               }
             }
           }

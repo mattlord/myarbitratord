@@ -43,10 +43,10 @@ type Node struct {
   db *sql.DB
 }
 
-// enable debug logging for all instances
+// enable debug logging for all nodes
 var Debug bool = false
 
-// setup debug logging for all instances
+// setup debug logging for all nodes
 var DebugLog = log.New(os.Stderr,
                "DEBUG: ",
                log.Ldate|log.Ltime|log.Lshortfile)
