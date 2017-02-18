@@ -31,10 +31,10 @@ import (
   // uncomment the next import to add profiling to the binary, available via "/debug/pprof" in the RESTful API 
   // see: http://blog.ralch.com/tutorial/golang-performance-and-memory-analysis/
   // _ "net/http/pprof"
-  "github.com/mattlord/myarbitratord/group_replication/instances"
+  "github.com/mattlord/myarbitratord/replication/group"
 )
 
-type MembersByOnlineNodes []instances.Instance
+type MembersByOnlineNodes []group.Node
 var debug = false
 
 var InfoLog = log.New( os.Stderr,
@@ -51,8 +51,8 @@ type stats struct {
   Uptime string				`json:"Uptime"`
   Loops  uint				`json:"Loops"`
   Partitions uint			`json:"Partitions"`
-  Current_seed *instances.Instance	`json:"Current Seed Node"`
-  Last_view *[]instances.Instance	`json:"Last Membership View"`
+  Current_seed *group.Node		`json:"Current Seed Node"`
+  Last_view *[]group.Node		`json:"Last Membership View"`
   sync.RWMutex
 }
 var mystats = stats{ Start_time: time.Now().Format(time.RFC1123), Loops: 0, Partitions: 0, }
@@ -139,7 +139,7 @@ func main(){
   go http.ListenAndServe( ":" + http_port, http.DefaultServeMux )
 
   if( debug ){
-    instances.Debug = true
+    group.Debug = true
   }
 
   if( mysql_auth_file != "" && mysql_pass == "" ){
@@ -176,7 +176,7 @@ func main(){
   InfoLog.Println( "Welcome to the MySQL Group Replication Arbitrator!" )
 
   InfoLog.Printf( "Starting operations from seed node: '%s:%s'\n", seed_host, seed_port )
-  seed_node := instances.New( seed_host, seed_port, mysql_user, mysql_pass )
+  seed_node := group.New( seed_host, seed_port, mysql_user, mysql_pass )
   err := MonitorCluster( seed_node )
   
   if( err != nil ){
@@ -188,10 +188,10 @@ func main(){
 }
 
 
-func MonitorCluster( seed_node *instances.Instance ) error {
+func MonitorCluster( seed_node *group.Node ) error {
   loop := true
   var err error
-  last_view := []instances.Instance{}
+  last_view := []group.Node{}
   
   for( loop == true ){
     mystats.Lock()

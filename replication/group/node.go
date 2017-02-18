@@ -14,7 +14,7 @@ Redistribution and use in source and binary forms, with or without modification,
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-package instances
+package group
 
 import (
   "os"
@@ -27,7 +27,7 @@ import (
 )
 
 // member variables that start with capital letters are public/exported 
-type Instance struct {
+type Node struct {
   Mysql_host string 		`json:"MySQL Host,omitempty"`
   Mysql_port string		`json:"MySQL Port,omitempty"`
   Mysql_user string		`json:"-"`
@@ -52,11 +52,11 @@ var DebugLog = log.New(os.Stderr,
                log.Ldate|log.Ltime|log.Lshortfile)
 
 
-func New( myh string, myp string, myu string, mys string ) * Instance {
-  return &Instance{ Mysql_host: myh, Mysql_port: myp, Mysql_user: myu, mysql_pass: mys }
+func New( myh string, myp string, myu string, mys string ) * Node {
+  return &Node{ Mysql_host: myh, Mysql_port: myp, Mysql_user: myu, mysql_pass: mys }
 }
 
-func (me *Instance) Connect() error {
+func (me *Node) Connect() error {
   var err error 
 
   if( me.db == nil ){
@@ -85,7 +85,7 @@ func (me *Instance) Connect() error {
     err = me.db.QueryRow( query_str ).Scan( &me.Group_name )
 
     if( err != nil || me.Group_name == "" ){
-      err = errors.New( "Specified MySQL Instance is not a member of any Group Replication cluster!" )
+      err = errors.New( "Specified MySQL Node is not a member of any Group Replication cluster!" )
     } else {
       query_str = "SELECT variable_value, member_state FROM global_variables gv INNER JOIN replication_group_members rgm ON(gv.variable_value=rgm.member_id) WHERE gv.variable_name='server_uuid'"
 
@@ -104,7 +104,7 @@ func (me *Instance) Connect() error {
   return err
 }
 
-func (me *Instance) HasQuorum() (bool, error) {
+func (me *Node) HasQuorum() (bool, error) {
   quorum_query := "SELECT IF( MEMBER_STATE='ONLINE' AND ((SELECT COUNT(*) FROM replication_group_members WHERE MEMBER_STATE != 'ONLINE') >= ((SELECT COUNT(*) FROM replication_group_members)/2) = 0), 'true', 'false' ) FROM replication_group_members JOIN replication_group_member_stats USING(member_id)"
 
   if( Debug ){
@@ -120,7 +120,7 @@ func (me *Instance) HasQuorum() (bool, error) {
   return me.Has_quorum, err
 }
 
-func (me *Instance) IsReadOnly() (bool, error) {
+func (me *Node) IsReadOnly() (bool, error) {
   ro_query := "SELECT variable_value FROM global_variables WHERE variable_name='super_read_only'"
 
   if( Debug ){
@@ -143,9 +143,9 @@ func (me *Instance) IsReadOnly() (bool, error) {
   return me.Read_only, err
 }
 
-func (me *Instance) GetMembers() (*[]Instance, error) {
+func (me *Node) GetMembers() (*[]Node, error) {
   membership_query := "SELECT member_id, member_host, member_port, member_state FROM replication_group_members"
-  member_slice := []Instance{}
+  member_slice := []Node{}
   me.Online_participants = 0
 
   if( Debug ){
@@ -178,7 +178,7 @@ func (me *Instance) GetMembers() (*[]Instance, error) {
   return &member_slice, err 
 }
 
-func (me *Instance) Shutdown() error {
+func (me *Node) Shutdown() error {
   shutdown_query := "SHUTDOWN"
 
   if( Debug ){
@@ -194,7 +194,7 @@ func (me *Instance) Shutdown() error {
   return err
 }
 
-func (me *Instance) TransactionsExecuted() (string, error) {
+func (me *Node) TransactionsExecuted() (string, error) {
   // since this is such a fast changing metric, I won't cache the value in the struct
   var gtids string
   gtid_query := "SELECT @@global.GTID_EXECUTED"
@@ -212,7 +212,7 @@ func (me *Instance) TransactionsExecuted() (string, error) {
   return gtids, err
 }
 
-func (me *Instance) TransactionsExecutedCount() (uint64, error) {
+func (me *Node) TransactionsExecutedCount() (uint64, error) {
   var err error
   var gtid_set string
   var cnt uint64
@@ -226,7 +226,7 @@ func (me *Instance) TransactionsExecutedCount() (uint64, error) {
   return cnt, err
 }
 
-func (me *Instance) ApplierQueueLength() (uint64, error) {
+func (me *Node) ApplierQueueLength() (uint64, error) {
   // since this is such a fast changing metric, I won't cache the value in the struct
   var qlen uint64
   var gtid_subset string
@@ -334,7 +334,7 @@ func TransactionCount( gtid_set string ) (uint64, error) {
   return gtid_count, err
 }   
 
-func (me *Instance) ForceMembers( fms string ) error {
+func (me *Node) ForceMembers( fms string ) error {
   force_membership_query := "SET GLOBAL group_replication_force_members='" + fms + "'"
 
   if( Debug ){
@@ -350,7 +350,7 @@ func (me *Instance) ForceMembers( fms string ) error {
   return err
 }
 
-func (me *Instance) SetReadOnly( ro bool ) error {
+func (me *Node) SetReadOnly( ro bool ) error {
   ro_query := "SET GLOBAL super_read_only=" 
  
   if( ro ){ 
@@ -373,7 +373,7 @@ func (me *Instance) SetReadOnly( ro bool ) error {
   return err 
 }
 
-func (me *Instance) SetOfflineMode( om bool ) error {
+func (me *Node) SetOfflineMode( om bool ) error {
   om_query := "SET GLOBAL offline_mode=" 
  
   if( om ){ 
@@ -395,7 +395,7 @@ func (me *Instance) SetOfflineMode( om bool ) error {
   return err 
 }
 
-func (me *Instance) Cleanup() error {
+func (me *Node) Cleanup() error {
   var err error = nil
 
   if( me.db != nil ){
