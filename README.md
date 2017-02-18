@@ -29,10 +29,9 @@ Usage of myarbitratord:
 
 ## How It Works:
 The deamon performs two functions, both done in distinct threads:
+#### A. The RESTful API thread simply provides runtime information on the monitored Group Replication cluster and the myarbitratord operations. See [the API docs](#available-restful-api-calls-with-example-output).
 
-#### The RESTful API thread simply provides runtime information on the monitored Group Replication cluster and the myarbitratord operations. See [the API docs](#available-restful-api-calls-with-example-output).
-
-#### We connect to a Group Replication cluster via the seed node information specified on the command-line via the -seed_host and -seed_port flags. The thread then loops:
+#### B. We connect to a Group Replication cluster via the seed node information specified on the command-line via the -seed_host and -seed_port flags. The thread then loops:
 1. If we see that the previous seed node is no longer reachable or valid, then we'll attempt to get a new seed node from the last known membership view. We don't give up attempting to find a seed node from the last known list of cluster participants.
 
 2. If we see that any nodes previously in the group aren't any more because they were isolated or encountered an error, then we try and shut them down. This helps to prevent dirty reads and lost writes. 
