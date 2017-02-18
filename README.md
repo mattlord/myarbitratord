@@ -139,5 +139,6 @@ gonzo:~ matt$ curl http://localhost:8099/stats
         }
     ]
 }
+```
 
 "/debug/pprof" (only available if binary is built with the "net/http/pprof" import uncommented) See: http://blog.ralch.com/tutorial/golang-performance-and-memory-analysis/
