@@ -68,27 +68,10 @@ Specifying the MySQL credentials on the command-line is insecure as the password
 
 ## Example:
 ```
-gonzo:myarbitratord matt$ $GOBIN/myarbitratord -seed_host="hanode2" -mysql_auth_file="/Users/matt/.my.json" -debug 
-INFO: 2017/02/14 12:25:02 myarbitratord.go:119: Starting HTTP server for RESTful API on port 8099
-DEBUG: 2017/02/14 12:25:02 myarbitratord.go:128: Reading MySQL credentials from file: /Users/matt/.my.json
-DEBUG: 2017/02/14 12:25:02 myarbitratord.go:141: Unmarshaled mysql auth file contents: {User:root Password:xxxxx}
-DEBUG: 2017/02/14 12:25:02 myarbitratord.go:153: Read mysql auth info from file. user: root, password: xxxxx
-INFO: 2017/02/14 12:25:02 myarbitratord.go:157: Welcome to the MySQL Group Replication Arbitrator!
-INFO: 2017/02/14 12:25:02 myarbitratord.go:159: Starting operations from seed node: 'hanode2:3306'
-DEBUG: 2017/02/14 12:25:02 instance.go:67: Making SQL connection using: root:xxxxx@tcp(hanode2:3306)/performance_schema
-DEBUG: 2017/02/14 12:25:02 instance.go:83: Checking group name on 'hanode2:3306'. Query: SELECT variable_value FROM global_variables WHERE variable_name='group_replication_group_name'
-DEBUG: 2017/02/14 12:25:02 instance.go:95: Checking status of 'hanode2:3306'. Query: SELECT variable_value, member_state FROM global_variables gv INNER JOIN replication_group_members rgm ON(gv.variable_value=rgm.member_id) WHERE gv.variable_name='server_uuid'
-DEBUG: 2017/02/14 12:25:02 instance.go:142: Getting group members from 'hanode2:3306'. Query: SELECT member_id, member_host, member_port, member_state FROM replication_group_members
-DEBUG: 2017/02/14 12:25:02 instance.go:163: Group member info found for 'hanode2:3306' -- ONLINE member count: 3, Members: [{Mysql_host:hanode2 Mysql_port:3306 Mysql_user:root mysql_pass:xxxxx Group_name: Server_uuid:39a07a39-4b82-44d2-a3cd-978511564a57 Member_state:ONLINE Online_participants:0 Has_quorum:false Read_only:false db:<nil>} {Mysql_host:hanode3 Mysql_port:3306 Mysql_user:root mysql_pass:xxxxx Group_name: Server_uuid:49311a3a-e058-46ba-8e7b-857b5db7d33f Member_state:ONLINE Online_participants:0 Has_quorum:false Read_only:false db:<nil>} {Mysql_host:hanode4 Mysql_port:3306 Mysql_user:root mysql_pass:xxxxx Group_name: Server_uuid:de6858e8-0669-4b82-a188-d2906daa6d91 Member_state:ONLINE Online_participants:0 Has_quorum:false Read_only:false db:<nil>}]
-DEBUG: 2017/02/14 12:25:02 instance.go:108: Checking if 'hanode2:3306' has a quorum. Query: SELECT IF( MEMBER_STATE='ONLINE' AND ((SELECT COUNT(*) FROM replication_group_members WHERE MEMBER_STATE != 'ONLINE') >= ((SELECT COUNT(*) FROM replication_group_members)/2) = 0), 'true', 'false' ) FROM replication_group_members JOIN replication_group_member_stats USING(member_id)
-DEBUG: 2017/02/14 12:25:02 myarbitratord.go:219: Seed node details: &{Mysql_host:hanode2 Mysql_port:3306 Mysql_user:root mysql_pass:xxxxx Group_name:550fa9ee-a1f8-4b6d-9bfe-c03c12cd1c72 Server_uuid:39a07a39-4b82-44d2-a3cd-978511564a57 Member_state:ONLINE Online_participants:3 Has_quorum:true Read_only:false db:0xc4200be370}
-DEBUG: 2017/02/14 12:25:04 instance.go:83: Checking group name on 'hanode2:3306'. Query: SELECT variable_value FROM global_variables WHERE variable_name='group_replication_group_name'
-DEBUG: 2017/02/14 12:25:04 instance.go:95: Checking status of 'hanode2:3306'. Query: SELECT variable_value, member_state FROM global_variables gv INNER JOIN replication_group_members rgm ON(gv.variable_value=rgm.member_id) WHERE gv.variable_name='server_uuid'
-DEBUG: 2017/02/14 12:25:04 instance.go:142: Getting group members from 'hanode2:3306'. Query: SELECT member_id, member_host, member_port, member_state FROM replication_group_members
-DEBUG: 2017/02/14 12:25:04 instance.go:163: Group member info found for 'hanode2:3306' -- ONLINE member count: 3, Members: [{Mysql_host:hanode2 Mysql_port:3306 Mysql_user:root mysql_pass:xxxxx Group_name: Server_uuid:39a07a39-4b82-44d2-a3cd-978511564a57 Member_state:ONLINE Online_participants:0 Has_quorum:false Read_only:false db:<nil>} {Mysql_host:hanode3 Mysql_port:3306 Mysql_user:root mysql_pass:xxxxx Group_name: Server_uuid:49311a3a-e058-46ba-8e7b-857b5db7d33f Member_state:ONLINE Online_participants:0 Has_quorum:false Read_only:false db:<nil>} {Mysql_host:hanode4 Mysql_port:3306 Mysql_user:root mysql_pass:xxxxx Group_name: Server_uuid:de6858e8-0669-4b82-a188-d2906daa6d91 Member_state:ONLINE Online_participants:0 Has_quorum:false Read_only:false db:<nil>}]
-DEBUG: 2017/02/14 12:25:04 instance.go:108: Checking if 'hanode2:3306' has a quorum. Query: SELECT IF( MEMBER_STATE='ONLINE' AND ((SELECT COUNT(*) FROM replication_group_members WHERE MEMBER_STATE != 'ONLINE') >= ((SELECT COUNT(*) FROM replication_group_members)/2) = 0), 'true', 'false' ) FROM replication_group_members JOIN replication_group_member_stats USING(member_id)
-DEBUG: 2017/02/14 12:25:04 myarbitratord.go:219: Seed node details: &{Mysql_host:hanode2 Mysql_port:3306 Mysql_user:root mysql_pass:xxxxx Group_name:550fa9ee-a1f8-4b6d-9bfe-c03c12cd1c72 Server_uuid:39a07a39-4b82-44d2-a3cd-978511564a57 Member_state:ONLINE Online_participants:3 Has_quorum:true Read_only:false db:0xc4200be370}
-...
+gonzo:myarbitratord matt$ $GOBIN/myarbitratord -seed_host="hanode3" -mysql_auth_file="/Users/matt/.my.json"
+INFO: 2017/02/18 13:22:34 myarbitratord.go:138: Starting HTTP server for RESTful API on port 8099
+INFO: 2017/02/18 13:22:34 myarbitratord.go:176: Welcome to the MySQL Group Replication Arbitrator!
+INFO: 2017/02/18 13:22:34 myarbitratord.go:178: Starting operations from seed node: 'hanode3:3306'
 ```
 
 ## Available RESTful API Calls With Example Output:
