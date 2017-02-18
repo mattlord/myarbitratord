@@ -29,7 +29,7 @@ You're a DBA that is tasked with monitoring a Group Replication cluster and ensu
 
 
 ## How It Works:
-The deamon performs two functions, both done in distinct threads:
+The deamon performs two functions, both done in distinct threads:  
 **A.** The RESTful API thread simply provides runtime information on the monitored Group Replication cluster and the myarbitratord operations. See [the API docs](#available-restful-api-calls-with-example-output).
 
 **B.** The main thread connects to a Group Replication cluster via the seed node information specified on the command-line via the -seed_host and -seed_port flags. The thread then loops and performs the following actions:
