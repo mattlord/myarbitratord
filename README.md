@@ -23,6 +23,25 @@ Usage of myarbitratord:
     	Port of the seed node used to start monitoring the Group Replication cluster (default "3306")
 ```
 
+## Use Cases:
+1. You're a DBA that is tasked with monitoring a Group Replication cluster and ensuring that the distributed MySQL service remains available and healthy from the application's perspective. 
+
+
+## How It Works:
+The deamon performs two functions, both done in distinct threads:
+
+# The RESTful API thread simply provides runtime information on the monitored Group Replication cluster and the myarbitratord operations. See [the API docs](#available-restful-api-calls-with-example-output).
+
+# We connect to a Group Replication cluster via the seed node information specified on the command-line via the -seed_host and -seed_port flags. The thread then loops:
+1. If we see that the previous seed node is no longer reachable or valid, then we'll attempt to get a new seed node from the last known membership view. We don't give up attempting to find a seed node from the last known list of cluster participants.
+
+2. If we see that any nodes previously in the group aren't any more because they were isolated or encountered an error, then we try and shut them down. This helps to prevent dirty reads and lost writes. 
+
+3. If we see that there was a network partition that caused a loss of quorum--which means that the cluster is blocked and cannot proceed without manual intervention--then we will attempt to pick a new primary partition, force the membership of this new group to allow the cluster to proceed, and then shutdown the instances left out of the primary partition.  When choosing the new primary partition, we take the two following factors into account:
+  1. If a partition has more online members, then this will be the new primary partition
+  2. If there's no clear winner based on partition size, then we will pick the partition that has the largest GTID set 
+
+
 ## Installation:
 1. Install golang: https://golang.org/doc/install
 
