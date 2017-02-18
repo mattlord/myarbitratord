@@ -75,7 +75,7 @@ INFO: 2017/02/18 13:22:34 myarbitratord.go:178: Starting operations from seed no
 ```
 
 ## Available RESTful API Calls With Example Output:
-"/"
+**/**
 ```
 gonzo:~ matt$ curl http://localhost:8099/
 Welcome to the MySQL Arbitrator's RESTful API handler!
@@ -84,7 +84,7 @@ The available API calls are:
 /stats: Provide runtime and operational stats
 ```
 
-"/stats"
+**/stats**
 ```
 gonzo:~ matt$ curl http://localhost:8099/stats
 {
@@ -124,4 +124,4 @@ gonzo:~ matt$ curl http://localhost:8099/stats
 }
 ```
 
-"/debug/pprof" (only available if binary is built with the "net/http/pprof" import uncommented) See: http://blog.ralch.com/tutorial/golang-performance-and-memory-analysis/
+**/debug/pprof** (only available if binary is built with the "net/http/pprof" import uncommented) See: http://blog.ralch.com/tutorial/golang-performance-and-memory-analysis/
