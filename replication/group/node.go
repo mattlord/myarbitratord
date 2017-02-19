@@ -87,7 +87,9 @@ func (me *Node) Connect() error {
 
       err = me.db.QueryRow( query_str ).Scan( &me.Group_name )
 
-      if( err != nil || me.Group_name == "" ){
+      if( err != nil ){
+        // let's just return the error 
+      } else if( me.Group_name == "" ){
         err = errors.New( "Specified MySQL Node is not a member of any Group Replication cluster!" )
       } else {
         query_str = "SELECT variable_value, member_state FROM global_variables gv INNER JOIN replication_group_members rgm ON(gv.variable_value=rgm.member_id) WHERE gv.variable_name='server_uuid'"

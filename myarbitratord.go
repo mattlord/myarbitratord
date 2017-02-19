@@ -264,24 +264,24 @@ func MonitorCluster( seed_node *group.Node ) error {
       // Let's try and shutdown the nodes that the failure detection has just recently flagged
 
       for i := 0; i < len(last_view); i++ {
-        err = last_view[i].Connect()
-        defer last_view[i].Cleanup()
+        if( seed_node != &last_view[i] ){
+          err = last_view[i].Connect()
+          defer last_view[i].Cleanup()
 
-        if( err == nil && (last_view[i].Member_state == "ERROR" || last_view[i].Member_state == "UNREACHABLE") ){
-          InfoLog.Printf( "Determining if we should shut down potentially non-healthy node: '%s:%s'\n", last_view[i].Mysql_host, last_view[i].Mysql_port )
+          if( err == nil ){
+            quorum, err = last_view[i].HasQuorum()
 
-          // If this node doesn't now also think it has a quorum, then it should be safe to shut it down
-          quorum, err = last_view[i].HasQuorum()
-            
-          if( quorum == false){ 
-            InfoLog.Printf( "Shutting down non-healthy node: '%s:%s'\n", last_view[i].Mysql_host, last_view[i].Mysql_port )
-            err = last_view[i].Shutdown()
-          } else {
-            InfoLog.Printf( "Problem when considering to shutdown node: '%s:%s' error: %+v\n", last_view[i].Mysql_host, last_view[i].Mysql_port, err )
-          }
-        } 
+            if( last_view[i].Member_state == "ERROR" || quorum == false ){
+              InfoLog.Printf( "Determining if we should shut down potentially non-healthy node: '%s:%s'\n", last_view[i].Mysql_host, last_view[i].Mysql_port )
 
-        last_view[i].Cleanup()
+              // If this node lists itself as in the ERROR state or doesn't think it has a quorum, then it should be safe to shut it down
+              InfoLog.Printf( "Shutting down non-healthy node: '%s:%s'\n", last_view[i].Mysql_host, last_view[i].Mysql_port )
+              err = last_view[i].Shutdown()
+            }
+          } // if we couldn't connect, then not much we can do... 
+
+          last_view[i].Cleanup()
+        }
       }
     } else {
       // handling other network partitions and split brain scenarios will be much trickier... I'll need to try and
@@ -421,7 +421,7 @@ func MonitorCluster( seed_node *group.Node ) error {
       }
     }
     
-    // save this view in case the seed node is no longer valid next time
+    // save a copy of this view in case the seed node is no longer valid next time
     last_view = *members
 
     time.Sleep( time.Millisecond * 2000 )
