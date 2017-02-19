@@ -422,7 +422,11 @@ func MonitorCluster( seed_node *group.Node ) error {
     }
     
     // save a copy of this view in case the seed node is no longer valid next time
+    last_view = nil
     last_view = *members
+    
+    // we should have a *copy* now, so let's dereference the old one for the GC
+    members = nil
 
     time.Sleep( time.Millisecond * 2000 )
   }

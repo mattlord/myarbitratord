@@ -68,7 +68,6 @@ func (me *Node) Connect() error {
     if( me.db == nil ){
       conn_string := me.Mysql_user + ":" + me.mysql_pass + "@tcp(" + me.Mysql_host + ":" + me.Mysql_port + ")/performance_schema"
 
-
       me.db = dbcp[conn_string]
 
       if( me.db == nil ){
@@ -437,7 +436,7 @@ func (me *Node) Cleanup() error {
   }
 
   if( me.db != nil ){
-    // We don't want to close this anymore as it's a pointer a connection in our pool now 
+    // We don't want to close this anymore as it's a pointer to a connection in our pool now 
     //err = me.db.Close()
   }
 
