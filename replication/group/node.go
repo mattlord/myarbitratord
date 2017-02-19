@@ -59,44 +59,48 @@ func New( myh string, myp string, myu string, mys string ) * Node {
 func (me *Node) Connect() error {
   var err error 
 
-  if( me.db == nil ){
-    conn_string := me.Mysql_user + ":" + me.mysql_pass + "@tcp(" + me.Mysql_host + ":" + me.Mysql_port + ")/performance_schema"
-
-    if( Debug ){
-      DebugLog.Printf( "Making SQL connection using: %s\n", conn_string )
-    }
-
-    me.db, err = sql.Open( "mysql", conn_string )
-
-    if( err != nil ){
-      DebugLog.Printf( "Error during sql.Open: %v", err )
-    }
-  }
-
-  err = me.db.Ping()
-
-  if( err == nil ){
-    query_str := "SELECT variable_value FROM global_variables WHERE variable_name='group_replication_group_name'"
-
-    if( Debug ){
-      DebugLog.Printf( "Checking group name on '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, query_str )
-    }
-
-    err = me.db.QueryRow( query_str ).Scan( &me.Group_name )
-
-    if( err != nil || me.Group_name == "" ){
-      err = errors.New( "Specified MySQL Node is not a member of any Group Replication cluster!" )
-    } else {
-      query_str = "SELECT variable_value, member_state FROM global_variables gv INNER JOIN replication_group_members rgm ON(gv.variable_value=rgm.member_id) WHERE gv.variable_name='server_uuid'"
+  if( me.Mysql_host == "" || me.Mysql_port == "" ){
+    err = errors.New( "No MySQL endpoint specified!" )
+  } else {
+    if( me.db == nil ){
+      conn_string := me.Mysql_user + ":" + me.mysql_pass + "@tcp(" + me.Mysql_host + ":" + me.Mysql_port + ")/performance_schema"
 
       if( Debug ){
-        DebugLog.Printf( "Checking status of '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, query_str )
+        DebugLog.Printf( "Making SQL connection using: %s\n", conn_string )
       }
 
-      err = me.db.QueryRow( query_str ).Scan( &me.Server_uuid, &me.Member_state )
+      me.db, err = sql.Open( "mysql", conn_string )
 
-      if( err == nil ){
-        _, err = me.IsReadOnly()
+      if( err != nil ){
+        DebugLog.Printf( "Error during sql.Open: %v", err )
+      }
+    }
+
+    err = me.db.Ping()
+
+    if( err == nil ){
+      query_str := "SELECT variable_value FROM global_variables WHERE variable_name='group_replication_group_name'"
+
+      if( Debug ){
+        DebugLog.Printf( "Checking group name on '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, query_str )
+      }
+
+      err = me.db.QueryRow( query_str ).Scan( &me.Group_name )
+
+      if( err != nil || me.Group_name == "" ){
+        err = errors.New( "Specified MySQL Node is not a member of any Group Replication cluster!" )
+      } else {
+        query_str = "SELECT variable_value, member_state FROM global_variables gv INNER JOIN replication_group_members rgm ON(gv.variable_value=rgm.member_id) WHERE gv.variable_name='server_uuid'"
+
+        if( Debug ){
+          DebugLog.Printf( "Checking status of '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, query_str )
+        }
+
+        err = me.db.QueryRow( query_str ).Scan( &me.Server_uuid, &me.Member_state )
+
+        if( err == nil ){
+          _, err = me.IsReadOnly()
+        }
       }
     }
   }
@@ -403,4 +407,20 @@ func (me *Node) Cleanup() error {
   }
 
   return err
+}
+
+func (me *Node) Reset() {
+  _ = me.Cleanup()
+
+  me.Mysql_host = "" 
+  me.Mysql_port = ""
+  me.Mysql_user = ""
+  me.mysql_pass = ""
+  me.Group_name = ""
+  me.Server_uuid = ""
+  me.Member_state = ""
+  me.Online_participants = 0
+  me.Has_quorum = false
+  me.Read_only = false
+  me.db = nil
 }

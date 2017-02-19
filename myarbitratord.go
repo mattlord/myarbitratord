@@ -111,7 +111,7 @@ func main(){
 
   http.DefaultServeMux.HandleFunc( "/", defaultHandler )
   http.DefaultServeMux.HandleFunc( "/stats", statsHandler )
-  http_port := "8099"
+  var http_port string
 
   flag.StringVar( &seed_host, "seed_host", "", "IP/Hostname of the seed node used to start monitoring the Group Replication cluster (Required Parameter!)" )
   flag.StringVar( &seed_port, "seed_port", "3306", "Port of the seed node used to start monitoring the Group Replication cluster" )
@@ -207,7 +207,7 @@ func MonitorCluster( seed_node *group.Node ) error {
     if( err != nil || seed_node.Member_state != "ONLINE" ){
       // if we couldn't connect to the current seed node or it's no longer part of the group
       // let's try and get a new seed node from the last known membership view 
-      InfoLog.Println( "Attempting to get a new seed node..." )
+      // InfoLog.Println( "Attempting to get a new seed node..." )
 
       for i := 0; i < len(last_view); i++ {
         if( seed_node != &last_view[i] ){
@@ -221,20 +221,34 @@ func MonitorCluster( seed_node *group.Node ) error {
       }
     }
 
-    members, err := seed_node.GetMembers()
-
-    if( err != nil || seed_node.Online_participants < 1 ){
-      // something is up with our current seed node, let's loop again 
+    // If we still don't have a valid seed node... 
+    if( err != nil || seed_node.Member_state != "ONLINE" ){
+      // if we already have a valid list of nodes to re-try, then let's "reset" it before we loop again
+      if( len(last_view) > 0 ){
+        seed_node.Reset()
+      }
       continue
     }
 
-    // save this view in case the seed node is no longer valid next time 
-    last_view = *members
+    members, err := seed_node.GetMembers()
+
+    if( err != nil || seed_node.Online_participants < 1 ){
+      // Something is still fishy with our seed node
+      // if we already have a valid list of nodes to re-try, then let's "reset" it before we loop again
+      if( len(last_view) > 0 ){
+        seed_node.Reset()
+      }
+      continue
+    }
 
     quorum, err := seed_node.HasQuorum()
 
     if( err != nil ){
-      // something is up with our current seed node, let's loop again 
+      // Something is still fishy with our seed node
+      // if we already have a valid list of nodes to re-try, then let's "reset" it before we loop again
+      if( len(last_view) > 0 ){
+        seed_node.Reset()
+      }
       continue
     }
 
@@ -245,20 +259,20 @@ func MonitorCluster( seed_node *group.Node ) error {
     if( quorum ){
       // Let's try and shutdown the nodes that the failure detection has just recently flagged
 
-      for _, member := range *members {
-        if( member.Member_state == "ERROR" || member.Member_state == "UNREACHABLE" ){
-          InfoLog.Printf( "Shutting down non-healthy node: '%s:%s'\n", member.Mysql_host, member.Mysql_port )
-          
-          err = member.Connect()
+      for i := 0; i < len(last_view); i++ {
+        err = last_view[i].Connect()
 
-          if( err != nil ){
-            InfoLog.Printf( "Could not connect to '%s:%s' in order to shut it down\n", member.Mysql_host, member.Mysql_port )
+        if( err == nil && (last_view[i].Member_state == "ERROR" || last_view[i].Member_state == "UNREACHABLE") ){
+          InfoLog.Printf( "Determining if we should shut down potentially non-healthy node: '%s:%s'\n", last_view[i].Mysql_host, last_view[i].Mysql_port )
+
+          // If this node doesn't now also think it has a quorum, then it should be safe to shut it down
+          quorum, err = last_view[i].HasQuorum()
+            
+          if( quorum == false){ 
+            InfoLog.Printf( "Shutting down non-healthy node: '%s:%s'\n", last_view[i].Mysql_host, last_view[i].Mysql_port )
+            err = last_view[i].Shutdown()
           } else {
-            err = member.Shutdown()
-          }
-
-          if( err != nil ){
-            InfoLog.Printf( "Could not shutdown node: '%s:%s'\n", member.Mysql_host, member.Mysql_port )
+            InfoLog.Printf( "Problem when considering to shutdown node: '%s:%s' error: %+v\n", last_view[i].Mysql_host, last_view[i].Mysql_port, err )
           }
         } 
       }
@@ -298,8 +312,7 @@ func MonitorCluster( seed_node *group.Node ) error {
       // If no one in fact has a quorum, then let's see which partition has the most
       // online/participating/communicating members. The participants in that partition
       // will then be the ones that we use to force the new membership and unlock the cluster
-
-      if( primary_partition == false ){
+      if( primary_partition == false && len(last_view) > 0 ){
         InfoLog.Println( "No primary partition found! Attempting to choose and force a new one ... " )
 
         sort.Sort( MembersByOnlineNodes(last_view) )
@@ -338,7 +351,11 @@ func MonitorCluster( seed_node *group.Node ) error {
         err = seed_node.Connect()
       
         if( err != nil ){
-          // let's just loop again 
+          // seed node is no good 
+          // if we already have a valid list of nodes to re-try, then let's "reset" it before we loop again
+          if( len(last_view) > 0 ){
+            seed_node.Reset()
+          }
           continue 
         }
 
@@ -390,11 +407,10 @@ func MonitorCluster( seed_node *group.Node ) error {
       }
     }
     
-    if( err != nil ){
-      loop = false
-    } else {
-      time.Sleep( time.Millisecond * 2000 )
-    }
+    // save this view in case the seed node is no longer valid next time
+    last_view = *members
+
+    time.Sleep( time.Millisecond * 2000 )
   }
 
   return err
