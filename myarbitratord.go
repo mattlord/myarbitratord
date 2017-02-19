@@ -207,7 +207,7 @@ func MonitorCluster( seed_node *group.Node ) error {
     if( err != nil || seed_node.Member_state != "ONLINE" ){
       // if we couldn't connect to the current seed node or it's no longer part of the group
       // let's try and get a new seed node from the last known membership view 
-      // InfoLog.Println( "Attempting to get a new seed node..." )
+      InfoLog.Println( "Attempting to get a new seed node..." )
 
       for i := 0; i < len(last_view); i++ {
         if( seed_node != &last_view[i] ){
