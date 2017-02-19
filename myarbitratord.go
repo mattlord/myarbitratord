@@ -212,12 +212,16 @@ func MonitorCluster( seed_node *group.Node ) error {
       for i := 0; i < len(last_view); i++ {
         if( seed_node != &last_view[i] ){
           err = last_view[i].Connect()
+          defer last_view[i].Cleanup()
+
           if( err == nil && last_view[i].Member_state == "ONLINE" ){
             seed_node = &last_view[i]
             InfoLog.Printf( "Updated seed node! New seed node is: '%s:%s'\n", seed_node.Mysql_host, seed_node.Mysql_port ) 
             break
           }
         }
+
+        last_view[i].Cleanup()
       }
     }
 
@@ -261,6 +265,7 @@ func MonitorCluster( seed_node *group.Node ) error {
 
       for i := 0; i < len(last_view); i++ {
         err = last_view[i].Connect()
+        defer last_view[i].Cleanup()
 
         if( err == nil && (last_view[i].Member_state == "ERROR" || last_view[i].Member_state == "UNREACHABLE") ){
           InfoLog.Printf( "Determining if we should shut down potentially non-healthy node: '%s:%s'\n", last_view[i].Mysql_host, last_view[i].Mysql_port )
@@ -275,6 +280,8 @@ func MonitorCluster( seed_node *group.Node ) error {
             InfoLog.Printf( "Problem when considering to shutdown node: '%s:%s' error: %+v\n", last_view[i].Mysql_host, last_view[i].Mysql_port, err )
           }
         } 
+
+        last_view[i].Cleanup()
       }
     } else {
       // handling other network partitions and split brain scenarios will be much trickier... I'll need to try and
@@ -295,6 +302,7 @@ func MonitorCluster( seed_node *group.Node ) error {
         var err error 
        
         err = last_view[i].Connect()    
+        defer last_view[i].Cleanup()
       
         if( err == nil ){
           quorum, err = last_view[i].HasQuorum()
@@ -307,6 +315,8 @@ func MonitorCluster( seed_node *group.Node ) error {
           primary_partition = true
           break
         }
+
+        last_view[i].Cleanup()
       }
 
       // If no one in fact has a quorum, then let's see which partition has the most
@@ -349,6 +359,7 @@ func MonitorCluster( seed_node *group.Node ) error {
         }
         
         err = seed_node.Connect()
+        defer seed_node.Cleanup()
       
         if( err != nil ){
           // seed node is no good 
@@ -370,6 +381,7 @@ func MonitorCluster( seed_node *group.Node ) error {
 
         for i, member := range *members {
           err = member.Connect()
+          defer member.Cleanup()
 
           if( err == nil && member.Member_state == "ONLINE" ){
             if( i != 0 ){
@@ -380,6 +392,8 @@ func MonitorCluster( seed_node *group.Node ) error {
           } else {
             member.Member_state = "SHOOT_ME"
           }
+
+          member.Cleanup()
         }
 
         if( force_member_string != "" ){

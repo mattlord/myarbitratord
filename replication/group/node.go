@@ -124,6 +124,22 @@ func (me *Node) HasQuorum() (bool, error) {
   return me.Has_quorum, err
 }
 
+func (me *Node) MemberStatus() (string, error) {
+  ms_query := "SELECT variable_value, member_state FROM global_variables gv INNER JOIN replication_group_members rgm ON(gv.variable_value=rgm.member_id) WHERE gv.variable_name='server_uuid'"
+
+  if( Debug ){
+    DebugLog.Printf( "Checking member status of '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, ms_query )
+  }
+
+  err := me.db.Ping()
+
+  if( err == nil ){
+    err = me.db.QueryRow( ms_query ).Scan( &me.Member_state )
+  }
+
+  return me.Member_state, err
+}
+
 func (me *Node) IsReadOnly() (bool, error) {
   ro_query := "SELECT variable_value FROM global_variables WHERE variable_name='super_read_only'"
 
@@ -402,6 +418,10 @@ func (me *Node) SetOfflineMode( om bool ) error {
 func (me *Node) Cleanup() error {
   var err error = nil
 
+  if( Debug ){
+    DebugLog.Printf( "Cleaning up Node object for '%s:%s'\n", me.Mysql_host, me.Mysql_port )
+  }
+
   if( me.db != nil ){
     err = me.db.Close()
   }
@@ -411,6 +431,10 @@ func (me *Node) Cleanup() error {
 
 func (me *Node) Reset() {
   _ = me.Cleanup()
+
+  if( Debug ){
+    DebugLog.Printf( "Resetting Node object for '%s:%s'\n", me.Mysql_host, me.Mysql_port )
+  }
 
   me.Mysql_host = "" 
   me.Mysql_port = ""
