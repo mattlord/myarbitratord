@@ -24,11 +24,11 @@ Usage of myarbitratord:
 ```
 
 
-## Use Case:
+## Use Case
 You're a DBA that is tasked with monitoring a Group Replication cluster and ensuring that the distributed MySQL service remains available and healthy from the application's perspective. 
 
 
-## How It Works:
+## How It Works
 The deamon performs two functions, both done in distinct threads:    
 **A.** The RESTful API thread simply provides runtime information on the monitored Group Replication cluster and the myarbitratord operations. See [the API docs](#available-restful-api-calls-with-example-output).
 
@@ -40,7 +40,7 @@ The deamon performs two functions, both done in distinct threads:
     2. If there's no clear winner based on partition size, then we will pick the partition that has the largest GTID set 
 
 
-## Installation:
+## Installation
 1. Install golang: https://golang.org/doc/install
 
 2. Setup the build environment: e.g. `export GOBIN=/Users/matt/go-workspace/bin GOPATH=/Users/matt/go-workspace && mkdir $GOPATH`
@@ -52,7 +52,7 @@ The deamon performs two functions, both done in distinct threads:
 5. Run it: `$GOBIN/myarbitratord -help`
 
 
-## Security:
+## Security
 Specifying the MySQL credentials on the command-line is insecure as the password is visible in the processlist output and elsewhere. The recommended way to specify the MySQL credentials is using a JSON file which can then be protected at the filesystem level. The format of that JSON file should be:
 ```json
 {
@@ -64,7 +64,7 @@ Specifying the MySQL credentials on the command-line is insecure as the password
 **Note:** _The RESTful API currently has no authentication mechanism_
 
 
-## Example:
+## Example
 ```
 gonzo:myarbitratord matt$ $GOBIN/myarbitratord -seed_host="hanode3" -mysql_auth_file="/Users/matt/.my.json"
 INFO: 2017/02/18 13:22:34 myarbitratord.go:138: Starting HTTP server for RESTful API on port 8099
@@ -72,7 +72,7 @@ INFO: 2017/02/18 13:22:34 myarbitratord.go:176: Welcome to the MySQL Group Repli
 INFO: 2017/02/18 13:22:34 myarbitratord.go:178: Starting operations from seed node: 'hanode3:3306'
 ```
 
-## Available RESTful API Calls With Example Output:
+## Available RESTful API Calls With Example Output
 **/**
 ```
 gonzo:~ matt$ curl http://localhost:8099/
