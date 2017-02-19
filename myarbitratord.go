@@ -261,7 +261,7 @@ func MonitorCluster( seed_node *group.Node ) error {
     } 
 
     if( quorum ){
-      // Let's try and shutdown the nodes that the failure detection has just recently flagged
+      // Let's try and shutdown the nodes that are no longer fully functioning members of the group
 
       for i := 0; i < len(last_view); i++ {
         if( seed_node != &last_view[i] ){

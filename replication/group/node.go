@@ -51,6 +51,9 @@ var DebugLog = log.New(os.Stderr,
                "DEBUG: ",
                log.Ldate|log.Ltime|log.Lshortfile)
 
+// let's maintain a pool of database objects for all Nodes
+var dbcp map[string]*sql.DB = make( map[string]*sql.DB )
+
 
 func New( myh string, myp string, myu string, mys string ) * Node {
   return &Node{ Mysql_host: myh, Mysql_port: myp, Mysql_user: myu, mysql_pass: mys }
@@ -65,11 +68,20 @@ func (me *Node) Connect() error {
     if( me.db == nil ){
       conn_string := me.Mysql_user + ":" + me.mysql_pass + "@tcp(" + me.Mysql_host + ":" + me.Mysql_port + ")/performance_schema"
 
-      if( Debug ){
-        DebugLog.Printf( "Making SQL connection using: %s\n", conn_string )
-      }
 
-      me.db, err = sql.Open( "mysql", conn_string )
+      me.db = dbcp[conn_string]
+
+      if( me.db == nil ){
+        if( Debug ){
+         DebugLog.Printf( "Making SQL connection using: %s\n", conn_string )
+        }
+        me.db, err = sql.Open( "mysql", conn_string )
+
+        if( Debug ){
+          DebugLog.Printf( "Adding SQL connection to the pool: %s\n", conn_string )
+        }
+        dbcp[conn_string] = me.db
+      }
 
       if( err != nil ){
         DebugLog.Printf( "Error during sql.Open: %v", err )
@@ -425,7 +437,8 @@ func (me *Node) Cleanup() error {
   }
 
   if( me.db != nil ){
-    err = me.db.Close()
+    // We don't want to close this anymore as it's a pointer a connection in our pool now 
+    //err = me.db.Close()
   }
 
   return err
