@@ -74,7 +74,7 @@ func (me *Node) Connect() error {
 
       dbcpRWLock.RLock()
       me.db = dbcp[conn_string]
-      dbcpRWLock.RLock()
+      dbcpRWLock.RUnlock()
 
       if( me.db == nil ){
         if( Debug ){
