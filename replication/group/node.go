@@ -72,29 +72,23 @@ func (me *Node) Connect() error {
     if( me.db == nil ){
       conn_string := me.Mysql_user + ":" + me.mysql_pass + "@tcp(" + me.Mysql_host + ":" + me.Mysql_port + ")/performance_schema"
 
-      dbcpRWLock.RLock()
-      me.db = dbcp[conn_string]
-      dbcpRWLock.RUnlock()
+      dbcpRWLock.Lock()
 
-      if( me.db == nil ){
+      if( dbcp[conn_string] == nil ){
         if( Debug ){
-         DebugLog.Printf( "Making SQL connection using: %s\n", conn_string )
+         DebugLog.Printf( "Making SQL connection and adding it to the pool using: %s\n", conn_string )
         }
 
-        me.db, err = sql.Open( "mysql", conn_string )
-
-        if( Debug ){
-          DebugLog.Printf( "Adding SQL connection to the pool: %s\n", conn_string )
-        }
-
-        dbcpRWLock.Lock()
-        dbcp[conn_string] = me.db
-        dbcpRWLock.Unlock()
+        dbcp[conn_string], err = sql.Open( "mysql", conn_string )
       }
 
       if( err != nil ){
         DebugLog.Printf( "Error during sql.Open: %v", err )
+      } else {
+        me.db = dbcp[conn_string]
       }
+ 
+      dbcpRWLock.Unlock()
     }
 
     err = me.db.Ping()
@@ -446,6 +440,9 @@ func (me *Node) Cleanup() error {
   if( me.db != nil ){
     // We don't want to close this anymore as it's a pointer to a connection in our pool now 
     //err = me.db.Close()
+    
+    // let's instead just remove the pointer to help the GC 
+    me.db = nil
   }
 
   return err
