@@ -29,8 +29,7 @@ import (
   "io/ioutil"
   "encoding/json"
   // uncomment the next import to add profiling to the binary, available via "/debug/pprof" in the RESTful API 
-  // see: http://blog.ralch.com/tutorial/golang-performance-and-memory-analysis/
-  // _ "net/http/pprof"
+  //_ "net/http/pprof"
   "github.com/mattlord/myarbitratord/replication/group"
 )
 
@@ -51,8 +50,8 @@ type stats struct {
   Uptime string				`json:"Uptime"`
   Loops  uint				`json:"Loops"`
   Partitions uint			`json:"Partitions"`
-  Current_seed *group.Node		`json:"Current Seed Node"`
-  Last_view *[]group.Node		`json:"Last Membership View"`
+  Current_seed group.Node		`json:"Current Seed Node"`
+  Last_view []group.Node		`json:"Last Membership View"`
   sync.RWMutex
 }
 var mystats = stats{ Start_time: time.Now().Format(time.RFC1123), Loops: 0, Partitions: 0, }
@@ -177,7 +176,7 @@ func main(){
 
   InfoLog.Printf( "Starting operations from seed node: '%s:%s'\n", seed_host, seed_port )
   seed_node := group.New( seed_host, seed_port, mysql_user, mysql_pass )
-  err := MonitorCluster( seed_node )
+  err := MonitorCluster( *seed_node )
   
   if( err != nil ){
     log.Fatal( err )
@@ -188,16 +187,16 @@ func main(){
 }
 
 
-func MonitorCluster( seed_node *group.Node ) error {
+func MonitorCluster( seed_node group.Node ) error {
   loop := true
   var err error
-  last_view := []group.Node{}
+  last_view := make( []group.Node, 0, 3 )
   
   for( loop == true ){
     mystats.Lock()
     mystats.Loops = mystats.Loops + 1
     mystats.Current_seed = seed_node
-    mystats.Last_view = &last_view
+    mystats.Last_view = last_view
     mystats.Unlock()
 
     // let's check the status of the current seed node
@@ -210,12 +209,12 @@ func MonitorCluster( seed_node *group.Node ) error {
       InfoLog.Println( "Attempting to get a new seed node..." )
 
       for i := 0; i < len(last_view); i++ {
-        if( seed_node != &last_view[i] ){
+        if( seed_node != last_view[i] ){
           err = last_view[i].Connect()
           defer last_view[i].Cleanup()
 
           if( err == nil && last_view[i].Member_state == "ONLINE" ){
-            seed_node = &last_view[i]
+            seed_node = last_view[i]
             InfoLog.Printf( "Updated seed node! New seed node is: '%s:%s'\n", seed_node.Mysql_host, seed_node.Mysql_port ) 
             break
           }
@@ -264,7 +263,7 @@ func MonitorCluster( seed_node *group.Node ) error {
       // Let's try and shutdown the nodes that are no longer fully functioning members of the group
 
       for i := 0; i < len(last_view); i++ {
-        if( seed_node != &last_view[i] ){
+        if( seed_node != last_view[i] ){
           err = last_view[i].Connect()
           defer last_view[i].Cleanup()
 
@@ -311,7 +310,7 @@ func MonitorCluster( seed_node *group.Node ) error {
         }
 
         if( err == nil && quorum ){
-          seed_node = &last_view[i]
+          seed_node = last_view[i]
           primary_partition = true
           break
         }
@@ -329,7 +328,7 @@ func MonitorCluster( seed_node *group.Node ) error {
 
         // now the last element in the array is the one to use as it's coordinating with the most nodes 
         view_len := len(last_view)-1
-        seed_node = &last_view[view_len]
+        seed_node = last_view[view_len]
 
         // *BUT*, if there's no clear winner based on sub-partition size, then we should pick the sub-partition (which
         // can be 1 node) that has executed the most GTIDs
@@ -355,7 +354,7 @@ func MonitorCluster( seed_node *group.Node ) error {
             }
           }
         
-          seed_node = &last_view[bestmemberpos]
+          seed_node = last_view[bestmemberpos]
         }
         
         err = seed_node.Connect()
@@ -379,7 +378,7 @@ func MonitorCluster( seed_node *group.Node ) error {
 
         force_member_string := ""
 
-        for i, member := range *members {
+        for i, member := range members {
           err = member.Connect()
           defer member.Cleanup()
 
@@ -405,7 +404,7 @@ func MonitorCluster( seed_node *group.Node ) error {
             InfoLog.Printf( "Error forcing group membership: %v\n", err )
           } else {
             // We successfully unblocked the group, now let's try and politely STONITH the nodes in the losing partition 
-            for _, member := range *members {
+            for _, member := range members {
               if( member.Member_state == "SHOOT_ME" ){
                 member.Shutdown()
               }
@@ -422,12 +421,8 @@ func MonitorCluster( seed_node *group.Node ) error {
     }
     
     // save a copy of this view in case the seed node is no longer valid next time
-    last_view = nil
-    last_view = *members
+    last_view = members
     
-    // we should have a *copy* now, so let's dereference the old one for the GC
-    members = nil
-
     time.Sleep( time.Millisecond * 2000 )
   }
 

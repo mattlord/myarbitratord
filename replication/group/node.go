@@ -110,10 +110,6 @@ func (me *Node) Connect() error {
         }
 
         err = me.db.QueryRow( query_str ).Scan( &me.Server_uuid, &me.Member_state )
-
-        if( err == nil ){
-          _, err = me.IsReadOnly()
-        }
       }
     }
   }
@@ -176,9 +172,9 @@ func (me *Node) IsReadOnly() (bool, error) {
   return me.Read_only, err
 }
 
-func (me *Node) GetMembers() (*[]Node, error) {
+func (me *Node) GetMembers() ([]Node, error) {
   membership_query := "SELECT member_id, member_host, member_port, member_state FROM replication_group_members"
-  member_slice := []Node{}
+  member_slice := make( []Node, 0, 3 )
   me.Online_participants = 0
 
   if( Debug ){
@@ -202,13 +198,15 @@ func (me *Node) GetMembers() (*[]Node, error) {
         member_slice = append( member_slice, *member )
       }
 
+      rows.Close()
+
       if( Debug ){
         DebugLog.Printf( "Group member info found for '%s:%s' -- ONLINE member count: %d, Members: %+v\n", me.Mysql_host, me.Mysql_port, me.Online_participants, member_slice )
       }
     }
   }
 
-  return &member_slice, err 
+  return member_slice, err 
 }
 
 func (me *Node) Shutdown() error {
