@@ -19,6 +19,7 @@ package group
 import (
   "os"
   "log"
+  "sync"
   "errors"
   "strings"
   "strconv"
@@ -51,8 +52,11 @@ var DebugLog = log.New(os.Stderr,
                "DEBUG: ",
                log.Ldate|log.Ltime|log.Lshortfile)
 
-// let's maintain a pool of database objects for all Nodes
+// let's maintain a simple global pool of database objects for all Nodes
 var dbcp map[string]*sql.DB = make( map[string]*sql.DB )
+// it can be accessed by multiple threads, so let's protect access to it 
+var dbcpRWLock sync.RWMutex
+
 
 
 func New( myh string, myp string, myu string, mys string ) * Node {
@@ -68,18 +72,24 @@ func (me *Node) Connect() error {
     if( me.db == nil ){
       conn_string := me.Mysql_user + ":" + me.mysql_pass + "@tcp(" + me.Mysql_host + ":" + me.Mysql_port + ")/performance_schema"
 
+      dbcpRWLock.RLock()
       me.db = dbcp[conn_string]
+      dbcpRWLock.RLock()
 
       if( me.db == nil ){
         if( Debug ){
          DebugLog.Printf( "Making SQL connection using: %s\n", conn_string )
         }
+
         me.db, err = sql.Open( "mysql", conn_string )
 
         if( Debug ){
           DebugLog.Printf( "Adding SQL connection to the pool: %s\n", conn_string )
         }
+
+        dbcpRWLock.Lock()
         dbcp[conn_string] = me.db
+        dbcpRWLock.Unlock()
       }
 
       if( err != nil ){
