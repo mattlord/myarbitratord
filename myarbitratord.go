@@ -377,6 +377,7 @@ func MonitorCluster( seed_node group.Node ) error {
         members, _ := seed_node.GetMembers()
 
         force_member_string := ""
+        var member_localaddr string
 
         for i, member := range members {
           err = member.Connect()
@@ -386,8 +387,15 @@ func MonitorCluster( seed_node group.Node ) error {
             if( i != 0 ){
               force_member_string = force_member_string + ","
             }
+
+            // we need to get the GCS/XCom 'host:port' combination, which is different from the 'host:port' combination for mysqld
+            member_localaddr, err = member.GetLocalAddress() 
  
-            force_member_string = force_member_string + member.Mysql_host + ":" + member.Mysql_port
+            if( err == nil ){ 
+              force_member_string = force_member_string + member_localaddr
+            } else {
+              InfoLog.Printf( "Problem getting local GCS address for '%s:%s': %+v\n", member.Mysql_host, member.Mysql_port, err )
+            }
           } else {
             member.Member_state = "SHOOT_ME"
           }
