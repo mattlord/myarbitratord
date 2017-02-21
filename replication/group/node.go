@@ -370,20 +370,20 @@ func TransactionCount( gtid_set string ) (uint64, error) {
 }   
 
 func (me *Node) GetGCSAddress() (string, error) {
-  localaddr_query := "SELECT variable_value FROM global_variables WHERE variable_name='group_replication_local_address'"
-  var localaddr string
+  gcsaddr_query := "SELECT variable_value FROM global_variables WHERE variable_name='group_replication_local_address'"
+  var gcsaddr string
 
   if( Debug ){
-    DebugLog.Printf( "Getting GCS endpoint for '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, localaddr_query )
+    DebugLog.Printf( "Getting GCS endpoint for '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, gcsaddr_query )
   }
 
   err := me.db.Ping()
 
   if( err == nil ){
-    err = me.db.QueryRow( localaddr_query ).Scan( &localaddr )
+    err = me.db.QueryRow( gcsaddr_query ).Scan( &gcsaddr )
   }
 
-  return localaddr, err
+  return gcsaddr, err
 }
 
 func (me *Node) ForceMembers( fms string ) error {
