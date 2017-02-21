@@ -389,12 +389,12 @@ func MonitorCluster( seed_node group.Node ) error {
             }
 
             // we need to get the GCS/XCom 'host:port' combination, which is different from the 'host:port' combination for mysqld
-            member_localaddr, err = member.GetLocalAddress() 
+            member_localaddr, err = member.GetGCSAddress() 
  
             if( err == nil ){ 
               force_member_string = force_member_string + member_localaddr
             } else {
-              InfoLog.Printf( "Problem getting local GCS address for '%s:%s': %+v\n", member.Mysql_host, member.Mysql_port, err )
+              InfoLog.Printf( "Problem getting GCS endpoint for '%s:%s': %+v\n", member.Mysql_host, member.Mysql_port, err )
             }
           } else {
             member.Member_state = "SHOOT_ME"
