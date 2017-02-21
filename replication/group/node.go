@@ -55,7 +55,7 @@ var DebugLog = log.New(os.Stderr,
 // let's maintain a simple global pool of database objects for all Nodes
 var dbcp map[string]*sql.DB = make( map[string]*sql.DB )
 // it can be accessed by multiple threads, so let's protect access to it 
-var dbcpRWLock sync.RWMutex
+var dbcp_mutex sync.Mutex
 
 
 
@@ -72,7 +72,7 @@ func (me *Node) Connect() error {
     if( me.db == nil ){
       conn_string := me.Mysql_user + ":" + me.mysql_pass + "@tcp(" + me.Mysql_host + ":" + me.Mysql_port + ")/performance_schema"
 
-      dbcpRWLock.Lock()
+      dbcp_mutex.Lock()
 
       if( dbcp[conn_string] == nil ){
         if( Debug ){
@@ -88,7 +88,7 @@ func (me *Node) Connect() error {
         me.db = dbcp[conn_string]
       }
  
-      dbcpRWLock.Unlock()
+      dbcp_mutex.Unlock()
     }
 
     err = me.db.Ping()
@@ -437,13 +437,12 @@ func (me *Node) Cleanup() error {
     DebugLog.Printf( "Cleaning up Node object for '%s:%s'\n", me.Mysql_host, me.Mysql_port )
   }
 
+  // We don't want to close this anymore as it's a pointer to a connection in our pool now 
+  /* 
   if( me.db != nil ){
-    // We don't want to close this anymore as it's a pointer to a connection in our pool now 
-    //err = me.db.Close()
-    
-    // let's instead just remove the pointer to help the GC 
-    me.db = nil
+    err = me.db.Close()
   }
+  */
 
   return err
 }
