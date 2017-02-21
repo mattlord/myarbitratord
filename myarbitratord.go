@@ -326,6 +326,10 @@ func MonitorCluster( seed_node group.Node ) error {
 
         sort.Sort( MembersByOnlineNodes(last_view) )
 
+        if( debug ){
+          DebugLog.Printf( "Member view sorted by number of online nodes: %+v\n", last_view )
+        } 
+
         // now the last element in the array is the one to use as it's coordinating with the most nodes 
         view_len := len(last_view)-1
         seed_node = last_view[view_len]
@@ -369,10 +373,6 @@ func MonitorCluster( seed_node group.Node ) error {
           continue 
         }
 
-        if( debug ){
-          DebugLog.Printf( "Member view sorted by number of online nodes: %+v\n", last_view )
-        } 
-
         // let's build a string of '<host>:<port>' combinations that we want to use for the new membership view
         members, _ := seed_node.GetMembers()
 
@@ -414,7 +414,7 @@ func MonitorCluster( seed_node group.Node ) error {
             // We successfully unblocked the group, now let's try and politely STONITH the nodes in the losing partition 
             for _, member := range members {
               if( member.Member_state == "SHOOT_ME" ){
-                member.Shutdown()
+                err = member.Shutdown()
               }
 
               if( err != nil ){
