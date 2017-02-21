@@ -39,7 +39,7 @@ The deamon performs two functions, both done in distinct threads:
     1. If a partition has more online members, then this will be the new primary partition    
     2. If there's no clear winner based on partition size, then we will pick the partition that has the largest GTID set 
 
-In order for the arbitrator to work reliably in all cases, it should have multiple network paths to each node to ensure that if *anyone* can communicate with a node, the arbitrator can as well. 
+Note: In order for the arbitrator to work reliably in all cases, it should have multiple network paths to each node to ensure that if *any human or process* can communicate with a given node over the network, that the arbitrator can as well. 
 
 
 ## Installation
