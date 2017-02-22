@@ -190,7 +190,7 @@ func main(){
 func MonitorCluster( seed_node group.Node ) error {
   loop := true
   var err error
-  last_view := make( []group.Node, 0, 3 )
+  last_view := []group.Node{}
   
   for( loop == true ){
     mystats.Lock()
@@ -429,8 +429,9 @@ func MonitorCluster( seed_node group.Node ) error {
     }
     
     // save a copy of this view in case the seed node is no longer valid next time
-    last_view = members
-    
+    last_view = make( []group.Node, len(members) )
+    copy( last_view, members ) 
+
     time.Sleep( time.Millisecond * 2000 )
   }
 
