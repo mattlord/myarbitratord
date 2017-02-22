@@ -379,12 +379,12 @@ func MonitorCluster( seed_node group.Node ) error {
         force_member_string := ""
         var member_gcsaddr string
 
-        for i, member := range members {
+        for _, member := range members {
           err = member.Connect()
           defer member.Cleanup()
 
           if( err == nil && member.Member_state == "ONLINE" ){
-            if( i != 0 ){
+            if( force_member_string != "" ){
               force_member_string = force_member_string + ","
             }
 
