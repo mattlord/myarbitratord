@@ -267,17 +267,23 @@ func MonitorCluster( seed_node group.Node ) error {
           err = last_view[i].Connect()
           defer last_view[i].Cleanup()
 
-          InfoLog.Printf( "Determining if we should shut down potentially non-healthy node: '%s:%s'\n", last_view[i].Mysql_host, last_view[i].Mysql_port )
-
           if( err == nil ){
-            quorum, err = last_view[i].HasQuorum()
+            // If Group Replication has been stopped, then let's set super_read_only mode to protect consistency 
+            // But not shut it down, as the DBA may need to perform some maintenance
+            if( last_view[i].Member_state == "OFFLINE" ){
+              InfoLog.Printf( "Enabling read only mode on OFFLINE node: '%s:%s'\n", last_view[i].Mysql_host, last_view[i].Mysql_port )
 
-            // If this node sees itself in the ERROR state or doesn't think it has a quorum, then it should be safe to shut it down
-            if( last_view[i].Member_state == "ERROR" || quorum == false ){
-              InfoLog.Printf( "Shutting down non-healthy node: '%s:%s'\n", last_view[i].Mysql_host, last_view[i].Mysql_port )
-              err = last_view[i].Shutdown()
-            }
-          } // if we couldn't connect, then not much we can do... 
+              last_view[i].SetReadOnly( true )
+            } else {
+              quorum, err = last_view[i].HasQuorum()
+
+              // If this node sees itself in the ERROR state or doesn't think it has a quorum, then it should be safe to shut it down
+              if( last_view[i].Member_state == "ERROR" || quorum == false ){
+                InfoLog.Printf( "Shutting down non-healthy node: '%s:%s'\n", last_view[i].Mysql_host, last_view[i].Mysql_port )
+                err = last_view[i].Shutdown()
+              }
+            } // if we couldn't connect, then not much we can do... 
+          }
 
           last_view[i].Cleanup()
         }
