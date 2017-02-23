@@ -34,7 +34,7 @@ The deamon performs two functions, both done in distinct threads:
 
 **B.** The main thread connects to a Group Replication cluster using the seed node information specified on the command-line via the -seed_host and -seed_port flags. The thread then loops and performs the following actions:    
   1. If we see that the previous seed node is no longer reachable or valid, then we'll attempt to get a new seed node from the last known membership view. We don't give up attempting to find a seed node from the last known list of cluster participants.    
-  2. If we see that any nodes which were previously in the group aren't any more
+  2. If we see that any nodes which were previously in the group aren't any more:
     1. If it's because they were isolated or encountered an error: then we try and shut them down. This helps to prevent (very) dirty reads and lost writes.     
     2. If it's because Group Replication was stopped: then we enable super_read_only mode on them in order to prevent lost writes and protect consistency.
   3. If we see that there was a network partition that caused a loss of quorum--which means that the cluster is blocked and cannot proceed without manual intervention--then we will attempt to pick a new primary partition, force the membership of this new group to allow the cluster to proceed, and then shutdown the instances left out of the primary partition.  When choosing the new primary partition, we take the two following factors into account:    
