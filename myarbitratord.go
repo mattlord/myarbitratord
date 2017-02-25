@@ -25,6 +25,7 @@ import (
   "flag"
   "sort"
   "fmt"
+  "runtime"
   "net/http"
   "io/ioutil"
   "encoding/json"
@@ -438,6 +439,8 @@ func MonitorCluster( seed_node group.Node ) error {
     last_view = make( []group.Node, len(members) )
     copy( last_view, members ) 
 
+    // let's force garbage collection while we sleep
+    go runtime.GC()
     time.Sleep( time.Millisecond * 2000 )
   }
 
