@@ -399,6 +399,11 @@ func (me *Node) ForceMembers( fms string ) error {
     _, err = me.db.Exec( force_membership_query )
   }
 
+  // now that we've forced the membership, let's reset the global variable (otherwise it will cause complications later) 
+  if( err == nil ){
+    _, err = me.db.Exec( "SET GLOBAL group_replication_force_members=''" )
+  }
+
   return err
 }
 
