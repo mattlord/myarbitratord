@@ -231,6 +231,7 @@ func MonitorCluster( seed_node group.Node ) error {
       if( len(last_view) > 0 ){
         seed_node.Reset()
       }
+      time.Sleep( time.Millisecond * 1000 )
       continue
     }
 
@@ -242,6 +243,7 @@ func MonitorCluster( seed_node group.Node ) error {
       if( len(last_view) > 0 ){
         seed_node.Reset()
       }
+      time.Sleep( time.Millisecond * 1000 )
       continue
     }
 
@@ -253,6 +255,7 @@ func MonitorCluster( seed_node group.Node ) error {
       if( len(last_view) > 0 ){
         seed_node.Reset()
       }
+      time.Sleep( time.Millisecond * 1000 )
       continue
     }
 
@@ -377,6 +380,7 @@ func MonitorCluster( seed_node group.Node ) error {
           if( len(last_view) > 0 ){
             seed_node.Reset()
           }
+          time.Sleep( time.Millisecond * 1000 )
           continue 
         }
 
