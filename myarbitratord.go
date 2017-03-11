@@ -197,6 +197,8 @@ func MonitorCluster( seed_node group.Node ) error {
     mystats.Lock()
     mystats.Loops = mystats.Loops + 1
     mystats.Current_seed = seed_node
+    // Setting the slice to nil will clear it and properly release all of the previous contents for the GC
+    mystats.Last_view = nil
     mystats.Last_view = last_view
     mystats.Unlock()
 
@@ -439,7 +441,9 @@ func MonitorCluster( seed_node group.Node ) error {
       }
     }
     
-    // save a copy of this view in case the seed node is no longer valid next time
+    // Setting the slice to nil will clear it and properly release all of the previous contents for the GC
+    last_view = nil
+    // Let's now save a copy of latest view in case the seed node is no longer valid next time
     last_view = make( []group.Node, len(members) )
     copy( last_view, members ) 
 
