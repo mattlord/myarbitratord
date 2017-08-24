@@ -57,6 +57,15 @@ var dbcp map[string]*sql.DB = make( map[string]*sql.DB )
 // it can be accessed by multiple threads, so let's protect access to it 
 var dbcp_mutex sync.Mutex
 
+const GR_NAME_QUERY string = "SELECT variable_value FROM global_variables WHERE variable_name='group_replication_group_name'"
+const GR_STATUS_QUERY string = "SELECT variable_value, member_state FROM global_variables gv INNER JOIN replication_group_members rgm ON(gv.variable_value=rgm.member_id) WHERE gv.variable_name='server_uuid'"
+const GR_QUORUM_QUERY string = "SELECT IF( MEMBER_STATE='ONLINE' AND ((SELECT COUNT(*) FROM replication_group_members WHERE MEMBER_STATE != 'ONLINE') >= ((SELECT COUNT(*) FROM replication_group_members)/2) = 0), 'true', 'false' ) FROM replication_group_members JOIN replication_group_member_stats USING(member_id)"
+const GR_RO_QUERY string = "SELECT variable_value FROM global_variables WHERE variable_name='super_read_only'"
+const GR_GTID_QUERY string = "SELECT @@global.GTID_EXECUTED"
+const GR_MEMBERS_QUERY string = "SELECT member_id, member_host, member_port, member_state FROM replication_group_members"
+const GR_GTID_SUBSET_QUERY string = "SELECT GTID_SUBTRACT( (SELECT Received_transaction_set FROM performance_schema.replication_connection_status WHERE Channel_name = 'group_replication_applier' ), (SELECT @@global.GTID_EXECUTED) )"
+const GR_GCSADDR_QUERY string = "SELECT variable_value FROM global_variables WHERE variable_name='group_replication_local_address'"
+
 
 
 func New( myh string, myp string, myu string, mys string ) * Node {
@@ -94,26 +103,22 @@ func (me *Node) Connect() error {
     err = me.db.Ping()
 
     if( err == nil ){
-      query_str := "SELECT variable_value FROM global_variables WHERE variable_name='group_replication_group_name'"
-
       if( Debug ){
-        DebugLog.Printf( "Checking group name on '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, query_str )
+        DebugLog.Printf( "Checking group name on '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, GR_NAME_QUERY )
       }
 
-      err = me.db.QueryRow( query_str ).Scan( &me.Group_name )
+      err = me.db.QueryRow( GR_NAME_QUERY ).Scan( &me.Group_name )
 
       if( err != nil ){
         // let's just return the error 
       } else if( me.Group_name == "" ){
         err = errors.New( "Specified MySQL Node is not a member of any Group Replication cluster!" )
       } else {
-        query_str = "SELECT variable_value, member_state FROM global_variables gv INNER JOIN replication_group_members rgm ON(gv.variable_value=rgm.member_id) WHERE gv.variable_name='server_uuid'"
-
         if( Debug ){
-          DebugLog.Printf( "Checking status of '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, query_str )
+          DebugLog.Printf( "Checking status of '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, GR_STATUS_QUERY )
         }
 
-        err = me.db.QueryRow( query_str ).Scan( &me.Server_uuid, &me.Member_state )
+        err = me.db.QueryRow( GR_STATUS_QUERY ).Scan( &me.Server_uuid, &me.Member_state )
       }
     }
   }
@@ -122,49 +127,43 @@ func (me *Node) Connect() error {
 }
 
 func (me *Node) HasQuorum() (bool, error) {
-  quorum_query := "SELECT IF( MEMBER_STATE='ONLINE' AND ((SELECT COUNT(*) FROM replication_group_members WHERE MEMBER_STATE != 'ONLINE') >= ((SELECT COUNT(*) FROM replication_group_members)/2) = 0), 'true', 'false' ) FROM replication_group_members JOIN replication_group_member_stats USING(member_id)"
-
   if( Debug ){
-    DebugLog.Printf( "Checking if '%s:%s' has a quorum. Query: %s\n", me.Mysql_host, me.Mysql_port, quorum_query )
+    DebugLog.Printf( "Checking if '%s:%s' has a quorum. Query: %s\n", me.Mysql_host, me.Mysql_port, GR_QUORUM_QUERY )
   }
 
   err := me.db.Ping()
 
   if( err == nil ){
-    err = me.db.QueryRow( quorum_query ).Scan( &me.Has_quorum )
+    err = me.db.QueryRow( GR_QUORUM_QUERY ).Scan( &me.Has_quorum )
   }
  
   return me.Has_quorum, err
 }
 
 func (me *Node) MemberStatus() (string, error) {
-  ms_query := "SELECT variable_value, member_state FROM global_variables gv INNER JOIN replication_group_members rgm ON(gv.variable_value=rgm.member_id) WHERE gv.variable_name='server_uuid'"
-
   if( Debug ){
-    DebugLog.Printf( "Checking member status of '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, ms_query )
+    DebugLog.Printf( "Checking member status of '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, GR_STATUS_QUERY )
   }
 
   err := me.db.Ping()
 
   if( err == nil ){
-    err = me.db.QueryRow( ms_query ).Scan( &me.Member_state )
+    err = me.db.QueryRow( GR_STATUS_QUERY ).Scan( &me.Member_state )
   }
 
   return me.Member_state, err
 }
 
 func (me *Node) IsReadOnly() (bool, error) {
-  ro_query := "SELECT variable_value FROM global_variables WHERE variable_name='super_read_only'"
-
   if( Debug ){
-    DebugLog.Printf( "Checking if '%s:%s' is read only. Query: %s\n", me.Mysql_host, me.Mysql_port, ro_query )
+    DebugLog.Printf( "Checking if '%s:%s' is read only. Query: %s\n", me.Mysql_host, me.Mysql_port, GR_RO_QUERY )
   }
 
   err := me.db.Ping()
 
   if( err == nil ){
     tmpval := "" // will be set to "ON" or "OFF"
-    err = me.db.QueryRow( ro_query ).Scan( &tmpval )
+    err = me.db.QueryRow( GR_RO_QUERY ).Scan( &tmpval )
 
     if( tmpval == "ON" ){
       me.Read_only = true
@@ -177,18 +176,17 @@ func (me *Node) IsReadOnly() (bool, error) {
 }
 
 func (me *Node) GetMembers() ([]Node, error) {
-  membership_query := "SELECT member_id, member_host, member_port, member_state FROM replication_group_members"
   member_slice := make( []Node, 0, 3 )
   me.Online_participants = 0
 
   if( Debug ){
-    DebugLog.Printf( "Getting group members from '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, membership_query )
+    DebugLog.Printf( "Getting group members from '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, GR_MEMBERS_QUERY )
   }
 
   err := me.db.Ping()
 
   if( err == nil ){
-    rows, err := me.db.Query( membership_query )
+    rows, err := me.db.Query( GR_MEMBERS_QUERY )
 
     if( err == nil ){
       defer rows.Close()
@@ -232,7 +230,6 @@ func (me *Node) Shutdown() error {
 func (me *Node) TransactionsExecuted() (string, error) {
   // since this is such a fast changing metric, I won't cache the value in the struct
   var gtids string
-  gtid_query := "SELECT @@global.GTID_EXECUTED"
 
   if( Debug ){
     DebugLog.Printf( "Getting the transactions executed on '%s:%s'\n", me.Mysql_host, me.Mysql_port )
@@ -241,7 +238,7 @@ func (me *Node) TransactionsExecuted() (string, error) {
   err := me.db.Ping()
 
   if( err == nil ){
-    err = me.db.QueryRow( gtid_query ).Scan( &gtids )
+    err = me.db.QueryRow( GR_GTID_QUERY ).Scan( &gtids )
   }
 
   return gtids, err
@@ -265,7 +262,6 @@ func (me *Node) ApplierQueueLength() (uint64, error) {
   // since this is such a fast changing metric, I won't cache the value in the struct
   var qlen uint64
   var gtid_subset string
-  gtid_subset_query := "SELECT GTID_SUBTRACT( (SELECT Received_transaction_set FROM performance_schema.replication_connection_status WHERE Channel_name = 'group_replication_applier' ), (SELECT @@global.GTID_EXECUTED) )"
 
   if( Debug ){
     DebugLog.Printf( "Getting the applier queue length on '%s:%s'\n", me.Mysql_host, me.Mysql_port )
@@ -274,7 +270,7 @@ func (me *Node) ApplierQueueLength() (uint64, error) {
   err := me.db.Ping()
 
   if( err == nil ){
-    err = me.db.QueryRow( gtid_subset_query ).Scan( &gtid_subset )
+    err = me.db.QueryRow( GR_GTID_SUBSET_QUERY ).Scan( &gtid_subset )
   }
 
   qlen, err = TransactionCount( gtid_subset )
@@ -370,17 +366,16 @@ func TransactionCount( gtid_set string ) (uint64, error) {
 }   
 
 func (me *Node) GetGCSAddress() (string, error) {
-  gcsaddr_query := "SELECT variable_value FROM global_variables WHERE variable_name='group_replication_local_address'"
   var gcsaddr string
 
   if( Debug ){
-    DebugLog.Printf( "Getting GCS endpoint for '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, gcsaddr_query )
+    DebugLog.Printf( "Getting GCS endpoint for '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, GR_GCSADDR_QUERY )
   }
 
   err := me.db.Ping()
 
   if( err == nil ){
-    err = me.db.QueryRow( gcsaddr_query ).Scan( &gcsaddr )
+    err = me.db.QueryRow( GR_GCSADDR_QUERY ).Scan( &gcsaddr )
   }
 
   return gcsaddr, err
