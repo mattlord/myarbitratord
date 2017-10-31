@@ -97,6 +97,7 @@ gonzo:~ matt$ curl http://localhost:8099/stats
     "Current Seed Node": {
         "MySQL Host": "hanode3",
         "MySQL Port": "3306",
+        "MySQL User": "root",
         "Group Name": "550fa9ee-a1f8-4b6d-9bfe-c03c12cd1c72",
         "Server UUID": "49311a3a-e058-46ba-8e7b-857b5db7d33f",
         "Member State": "ONLINE",
@@ -107,6 +108,7 @@ gonzo:~ matt$ curl http://localhost:8099/stats
         {
             "MySQL Host": "hanode2",
             "MySQL Port": "3306",
+            "MySQL User": "root",
             "Group Name": "550fa9ee-a1f8-4b6d-9bfe-c03c12cd1c72",
             "Server UUID": "39a07a39-4b82-44d2-a3cd-978511564a57",
             "Member State": "ONLINE",
@@ -115,6 +117,7 @@ gonzo:~ matt$ curl http://localhost:8099/stats
         {
             "MySQL Host": "hanode3",
             "MySQL Port": "3306",
+            "MySQL User": "root",
             "Group Name": "550fa9ee-a1f8-4b6d-9bfe-c03c12cd1c72",
             "Server UUID": "49311a3a-e058-46ba-8e7b-857b5db7d33f",
             "Member State": "ONLINE",
@@ -123,6 +126,7 @@ gonzo:~ matt$ curl http://localhost:8099/stats
         {
             "MySQL Host": "hanode4",
             "MySQL Port": "3306",
+            "MySQL User": "root",
             "Group Name": "550fa9ee-a1f8-4b6d-9bfe-c03c12cd1c72",
             "Server UUID": "de6858e8-0669-4b82-a188-d2906daa6d91",
             "Member State": "ONLINE",
