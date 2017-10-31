@@ -101,25 +101,25 @@ func statsHandler(httpW http.ResponseWriter, httpR *http.Request) {
 func main() {
 	var SeedHost string
 	var SeedPort string
-	var MysqlUser string
-	var MysqlPass string
-	var MysqlAuthFile string
-	type json_mysql_auth struct {
+	var MySQLUser string
+	var MySQLPass string
+	var MySQLAuthFile string
+	type JSONMySQLAuth struct {
 		User     string `json:"user"`
 		Password string `json:"password"`
 	}
 
 	http.DefaultServeMux.HandleFunc("/", defaultHandler)
 	http.DefaultServeMux.HandleFunc("/stats", statsHandler)
-	var HttpPort string
+	var HTTPPort string
 
 	flag.StringVar(&SeedHost, "seed-host", "", "IP/Hostname of the seed node used to start monitoring the Group Replication cluster (Required Parameter!)")
 	flag.StringVar(&SeedPort, "seed-port", "3306", "Port of the seed node used to start monitoring the Group Replication cluster")
 	flag.BoolVar(&debug, "debug", false, "Execute in debug mode with all debug logging enabled")
-	flag.StringVar(&MysqlUser, "mysql-user", "root", "The mysql user account to be used when connecting to any node in the cluster")
-	flag.StringVar(&MysqlPass, "mysql-password", "", "The mysql user account password to be used when connecting to any node in the cluster")
-	flag.StringVar(&MysqlAuthFile, "mysql-auth-file", "", "The JSON encoded file containining user and password entities for the mysql account to be used when connecting to any node in the cluster")
-	flag.StringVar(&HttpPort, "http-port", "8099", "The HTTP port used for the RESTful API")
+	flag.StringVar(&MySQLUser, "mysql-user", "root", "The mysql user account to be used when connecting to any node in the cluster")
+	flag.StringVar(&MySQLPass, "mysql-password", "", "The mysql user account password to be used when connecting to any node in the cluster")
+	flag.StringVar(&MySQLAuthFile, "mysql-auth-file", "", "The JSON encoded file containining user and password entities for the mysql account to be used when connecting to any node in the cluster")
+	flag.StringVar(&HTTPPort, "http-port", "8099", "The HTTP port used for the RESTful API")
 
 	flag.Parse()
 
@@ -135,49 +135,49 @@ func main() {
 	}
 
 	// let's start a thread to handle the RESTful API calls
-	InfoLog.Printf("Starting HTTP server for RESTful API on port %s\n", HttpPort)
-	go http.ListenAndServe(":"+HttpPort, http.DefaultServeMux)
+	InfoLog.Printf("Starting HTTP server for RESTful API on port %s\n", HTTPPort)
+	go http.ListenAndServe(":"+HTTPPort, http.DefaultServeMux)
 
 	if debug {
 		group.Debug = true
 	}
 
-	if MysqlAuthFile != "" && MysqlPass == "" {
+	if MySQLAuthFile != "" && MySQLPass == "" {
 		if debug {
-			DebugLog.Printf("Reading MySQL credentials from file: %s\n", MysqlAuthFile)
+			DebugLog.Printf("Reading MySQL credentials from file: %s\n", MySQLAuthFile)
 		}
 
-		jsonfile, err := ioutil.ReadFile(MysqlAuthFile)
+		JSONFile, err := ioutil.ReadFile(MySQLAuthFile)
 
 		if err != nil {
-			log.Fatal("Could not read mysql credentials from specified file: " + MysqlAuthFile)
+			log.Fatal("Could not read mysql credentials from specified file: " + MySQLAuthFile)
 		}
 
-		var jsonauth json_mysql_auth
-		json.Unmarshal(jsonfile, &jsonauth)
+		var JSONAuth JSONMySQLAuth
+		json.Unmarshal(JSONFile, &JSONAuth)
 
 		if debug {
-			DebugLog.Printf("Unmarshaled mysql auth file contents: %+v\n", jsonauth)
+			DebugLog.Printf("Unmarshaled mysql auth file contents: %+v\n", JSONAuth)
 		}
 
-		MysqlUser = jsonauth.User
-		MysqlPass = jsonauth.Password
+		MySQLUser = JSONAuth.User
+		MySQLPass = JSONAuth.Password
 
-		if MysqlUser == "" || MysqlPass == "" {
-			errstr := "Failed to read user and password from " + MysqlAuthFile + ". Ensure that the file contents are in the required format: \n{\n  \"user\": \"myser\",\n  \"password\": \"mypass\"\n}"
+		if MySQLUser == "" || MySQLPass == "" {
+			errstr := "Failed to read user and password from " + MySQLAuthFile + ". Ensure that the file contents are in the required format: \n{\n  \"user\": \"myser\",\n  \"password\": \"mypass\"\n}"
 			log.Fatal(errstr)
 		}
 
 		if debug {
-			DebugLog.Printf("Read mysql auth info from file. user: %s, password: %s\n", MysqlUser, MysqlPass)
+			DebugLog.Printf("Read mysql auth info from file. user: %s, password: %s\n", MySQLUser, MySQLPass)
 		}
 	}
 
 	InfoLog.Println("Welcome to the MySQL Group Replication Arbitrator!")
 
 	InfoLog.Printf("Starting operations from seed node: '%s:%s'\n", SeedHost, SeedPort)
-	SeedNode := group.New(SeedHost, SeedPort, MysqlUser, MysqlPass)
-	err := MonitorCluster(*SeedNode)
+	seedNode := group.New(SeedHost, SeedPort, MySQLUser, MySQLPass)
+	err := MonitorCluster(*seedNode)
 
 	if err != nil {
 		log.Fatal(err)
@@ -187,110 +187,110 @@ func main() {
 	}
 }
 
-func MonitorCluster(SeedNode group.Node) error {
+func MonitorCluster(seedNode group.Node) error {
 	loop := true
 	var err error
-	LastView := []group.Node{}
+	lastView := []group.Node{}
 
 	for loop == true {
 		mystats.Lock()
 		mystats.Loops = mystats.Loops + 1
-		mystats.CurrentSeed = SeedNode
+		mystats.CurrentSeed = seedNode
 		// Setting the slice to nil will clear it and properly release all of the previous contents for the GC
 		mystats.LastView = nil
-		mystats.LastView = LastView
+		mystats.LastView = lastView
 		mystats.Unlock()
 
 		// let's check the status of the current seed node
-		err = SeedNode.Connect()
-		defer SeedNode.Cleanup()
+		err = seedNode.Connect()
+		defer seedNode.Cleanup()
 
-		if err != nil || SeedNode.MemberState != "ONLINE" {
+		if err != nil || seedNode.MemberState != "ONLINE" {
 			// if we couldn't connect to the current seed node or it's no longer part of the group
 			// let's try and get a new seed node from the last known membership view
 			InfoLog.Println("Attempting to get a new seed node...")
 
-			for i := 0; i < len(LastView); i++ {
-				if SeedNode != LastView[i] {
-					err = LastView[i].Connect()
-					defer LastView[i].Cleanup()
+			for i := 0; i < len(lastView); i++ {
+				if seedNode != lastView[i] {
+					err = lastView[i].Connect()
+					defer lastView[i].Cleanup()
 
-					if err == nil && LastView[i].MemberState == "ONLINE" {
-						SeedNode = LastView[i]
-						InfoLog.Printf("Updated seed node! New seed node is: '%s:%s'\n", SeedNode.MysqlHost, SeedNode.MysqlPort)
+					if err == nil && lastView[i].MemberState == "ONLINE" {
+						seedNode = lastView[i]
+						InfoLog.Printf("Updated seed node! New seed node is: '%s:%s'\n", seedNode.MySQLHost, seedNode.MySQLPort)
 						break
 					}
 				}
 
-				LastView[i].Cleanup()
+				lastView[i].Cleanup()
 			}
 		}
 
 		// If we still don't have a valid seed node...
-		if err != nil || SeedNode.MemberState != "ONLINE" {
+		if err != nil || seedNode.MemberState != "ONLINE" {
 			// if we already have a valid list of nodes to re-try, then let's "reset" it before we loop again
-			if len(LastView) > 0 {
-				SeedNode.Reset()
+			if len(lastView) > 0 {
+				seedNode.Reset()
 			}
 			time.Sleep(time.Millisecond * 1000)
 			continue
 		}
 
-		members, err := SeedNode.GetMembers()
+		members, err := seedNode.GetMembers()
 
-		if err != nil || SeedNode.OnlineParticipants < 1 {
+		if err != nil || seedNode.OnlineParticipants < 1 {
 			// Something is still fishy with our seed node
 			// if we already have a valid list of nodes to re-try, then let's "reset" it before we loop again
-			if len(LastView) > 0 {
-				SeedNode.Reset()
+			if len(lastView) > 0 {
+				seedNode.Reset()
 			}
 			time.Sleep(time.Millisecond * 1000)
 			continue
 		}
 
-		quorum, err := SeedNode.HasQuorum()
+		quorum, err := seedNode.HasQuorum()
 
 		if err != nil {
 			// Something is still fishy with our seed node
 			// if we already have a valid list of nodes to re-try, then let's "reset" it before we loop again
-			if len(LastView) > 0 {
-				SeedNode.Reset()
+			if len(lastView) > 0 {
+				seedNode.Reset()
 			}
 			time.Sleep(time.Millisecond * 1000)
 			continue
 		}
 
 		if debug {
-			DebugLog.Printf("Seed node details: %+v", SeedNode)
+			DebugLog.Printf("Seed node details: %+v", seedNode)
 		}
 
 		if quorum {
 			// Let's see if there are any nodes that are no longer fully functioning members of the group and then take action
 
-			for i := 0; i < len(LastView); i++ {
-				if SeedNode != LastView[i] {
-					err = LastView[i].Connect()
-					defer LastView[i].Cleanup()
+			for i := 0; i < len(lastView); i++ {
+				if seedNode != lastView[i] {
+					err = lastView[i].Connect()
+					defer lastView[i].Cleanup()
 
 					if err == nil {
 						// If Group Replication has been stopped, then let's set super_read_only mode to protect consistency
 						// But not shut it down, as the DBA may need to perform some maintenance
-						if LastView[i].MemberState == "OFFLINE" {
-							InfoLog.Printf("Enabling read only mode on OFFLINE node: '%s:%s'\n", LastView[i].MysqlHost, LastView[i].MysqlPort)
+						if lastView[i].MemberState == "OFFLINE" {
+							InfoLog.Printf("Enabling read only mode on OFFLINE node: '%s:%s'\n", lastView[i].MySQLHost, lastView[i].MySQLPort)
 
-							LastView[i].SetReadOnly(true)
+							lastView[i].SetReadOnly(true)
 						} else {
-							quorum, err = LastView[i].HasQuorum()
+							quorum, err = lastView[i].HasQuorum()
 
 							// If this node sees itself in the ERROR state or doesn't think it has a quorum, then it should be safe to shut it down
-							if LastView[i].MemberState == "ERROR" || quorum == false {
-								InfoLog.Printf("Shutting down non-healthy node: '%s:%s'\n", LastView[i].MysqlHost, LastView[i].MysqlPort)
-								err = LastView[i].Shutdown()
+							if lastView[i].MemberState == "ERROR" || quorum == false {
+								InfoLog.Printf("Shutting down non-healthy node: '%s:%s'\n", lastView[i].MySQLHost, lastView[i].MySQLPort)
+								err = lastView[i].Shutdown()
 							}
 						} // if we couldn't connect, then not much we can do...
 					}
 
-					LastView[i].Cleanup()
+					lastView[i].Cleanup()
 				}
 			}
 		} else {
@@ -308,56 +308,56 @@ func MonitorCluster(SeedNode group.Node) error {
 			// does anyone have a quorum? Let's double check before forcing the membership
 			PrimaryPartition := false
 
-			for i := 0; i < len(LastView); i++ {
+			for i := 0; i < len(lastView); i++ {
 				var err error
 
-				err = LastView[i].Connect()
-				defer LastView[i].Cleanup()
+				err = lastView[i].Connect()
+				defer lastView[i].Cleanup()
 
 				if err == nil {
-					quorum, err = LastView[i].HasQuorum()
+					quorum, err = lastView[i].HasQuorum()
 					// let's make sure that the OnlineParticipants is up to date
-					_, err = LastView[i].GetMembers()
+					_, err = lastView[i].GetMembers()
 				}
 
 				if err == nil && quorum {
-					SeedNode = LastView[i]
+					seedNode = lastView[i]
 					PrimaryPartition = true
 					break
 				}
 
-				LastView[i].Cleanup()
+				lastView[i].Cleanup()
 			}
 
 			// If no one in fact has a quorum, then let's see which partition has the most
 			// online/participating/communicating members. The participants in that partition
 			// will then be the ones that we use to force the new membership and unlock the cluster
-			if PrimaryPartition == false && len(LastView) > 0 {
+			if PrimaryPartition == false && len(lastView) > 0 {
 				InfoLog.Println("No primary partition found! Attempting to choose and force a new one ... ")
 
-				sort.Sort(MembersByOnlineNodes(LastView))
+				sort.Sort(MembersByOnlineNodes(lastView))
 
 				if debug {
-					DebugLog.Printf("Member view sorted by number of online nodes: %+v\n", LastView)
+					DebugLog.Printf("Member view sorted by number of online nodes: %+v\n", lastView)
 				}
 
 				// now the last element in the array is the one to use as it's coordinating with the most nodes
-				ViewLen := len(LastView) - 1
-				SeedNode = LastView[ViewLen]
+				ViewLen := len(lastView) - 1
+				seedNode = lastView[ViewLen]
 
 				// *BUT*, if there's no clear winner based on sub-partition size, then we should pick the sub-partition (which
 				// can be 1 node) that has executed the most GTIDs
-				if ViewLen >= 1 && LastView[ViewLen].OnlineParticipants == LastView[ViewLen-1].OnlineParticipants {
+				if ViewLen >= 1 && lastView[ViewLen].OnlineParticipants == lastView[ViewLen-1].OnlineParticipants {
 					bestmemberpos := ViewLen
 					var bestmembertrxcnt uint64
 					var curtrxcnt uint64
-					bestmembertrxcnt, err = LastView[ViewLen].TransactionsExecutedCount()
+					bestmembertrxcnt, err = lastView[ViewLen].TransactionsExecutedCount()
 
 					// let's loop backwards through the array as it's sorted by online participants / partition size now
 					// skipping the last one as we already have the info for it
 					for i := ViewLen - 1; i >= 0; i-- {
-						if LastView[i].OnlineParticipants == LastView[bestmemberpos].OnlineParticipants {
-							curtrxcnt, err = LastView[i].TransactionsExecutedCount()
+						if lastView[i].OnlineParticipants == lastView[bestmemberpos].OnlineParticipants {
+							curtrxcnt, err = lastView[i].TransactionsExecutedCount()
 
 							if curtrxcnt > bestmembertrxcnt {
 								bestmembertrxcnt = curtrxcnt
@@ -369,44 +369,44 @@ func MonitorCluster(SeedNode group.Node) error {
 						}
 					}
 
-					SeedNode = LastView[bestmemberpos]
+					seedNode = lastView[bestmemberpos]
 				}
 
-				err = SeedNode.Connect()
-				defer SeedNode.Cleanup()
+				err = seedNode.Connect()
+				defer seedNode.Cleanup()
 
 				if err != nil {
 					// seed node is no good
 					// if we already have a valid list of nodes to re-try, then let's "reset" it before we loop again
-					if len(LastView) > 0 {
-						SeedNode.Reset()
+					if len(lastView) > 0 {
+						seedNode.Reset()
 					}
 					time.Sleep(time.Millisecond * 1000)
 					continue
 				}
 
 				// let's build a string of '<host>:<port>' combinations that we want to use for the new membership view
-				members, _ := SeedNode.GetMembers()
+				members, _ := seedNode.GetMembers()
 
-				ForceMemberString := ""
-				var MemberGcsAddr string
+				forceMemberString := ""
+				var memberGcsAddr string
 
 				for _, member := range members {
 					err = member.Connect()
 					defer member.Cleanup()
 
 					if err == nil && member.MemberState == "ONLINE" {
-						if ForceMemberString != "" {
-							ForceMemberString = ForceMemberString + ","
+						if forceMemberString != "" {
+							forceMemberString = forceMemberString + ","
 						}
 
 						// we need to get the GCS/XCom 'host:port' combination, which is different from the 'host:port' combination for mysqld
-						MemberGcsAddr, err = member.GetGCSAddress()
+						memberGcsAddr, err = member.GetGCSAddress()
 
 						if err == nil {
-							ForceMemberString = ForceMemberString + MemberGcsAddr
+							forceMemberString = forceMemberString + memberGcsAddr
 						} else {
-							InfoLog.Printf("Problem getting GCS endpoint for '%s:%s': %+v\n", member.MysqlHost, member.MysqlPort, err)
+							InfoLog.Printf("Problem getting GCS endpoint for '%s:%s': %+v\n", member.MySQLHost, member.MySQLPort, err)
 						}
 					} else {
 						member.MemberState = "SHOOT_ME"
@@ -415,10 +415,10 @@ func MonitorCluster(SeedNode group.Node) error {
 					member.Cleanup()
 				}
 
-				if ForceMemberString != "" {
-					InfoLog.Printf("Forcing group membership to form new primary partition! Using: '%s'\n", ForceMemberString)
+				if forceMemberString != "" {
+					InfoLog.Printf("Forcing group membership to form new primary partition! Using: '%s'\n", forceMemberString)
 
-					err := SeedNode.ForceMembers(ForceMemberString)
+					err := seedNode.ForceMembers(forceMemberString)
 
 					if err != nil {
 						InfoLog.Printf("Error forcing group membership: %v\n", err)
@@ -430,7 +430,7 @@ func MonitorCluster(SeedNode group.Node) error {
 							}
 
 							if err != nil {
-								InfoLog.Printf("Could not shutdown node: '%s:%s'\n", member.MysqlHost, member.MysqlPort)
+								InfoLog.Printf("Could not shutdown node: '%s:%s'\n", member.MySQLHost, member.MySQLPort)
 							}
 						}
 					}
@@ -441,10 +441,10 @@ func MonitorCluster(SeedNode group.Node) error {
 		}
 
 		// Setting the slice to nil will clear it and properly release all of the previous contents for the GC
-		LastView = nil
+		lastView = nil
 		// Let's now save a copy of latest view in case the seed node is no longer valid next time
-		LastView = make([]group.Node, len(members))
-		copy(LastView, members)
+		lastView = make([]group.Node, len(members))
+		copy(lastView, members)
 
 		// let's force garbage collection while we sleep
 		go runtime.GC()
