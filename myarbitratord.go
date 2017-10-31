@@ -99,8 +99,8 @@ func statsHandler(httpW http.ResponseWriter, httpR *http.Request) {
 }
 
 func main() {
-	var SeedHost string
-	var SeedPort string
+	var seedHost string
+	var seedPort string
 	var MySQLUser string
 	var MySQLPass string
 	var MySQLAuthFile string
@@ -113,8 +113,8 @@ func main() {
 	http.DefaultServeMux.HandleFunc("/stats", statsHandler)
 	var HTTPPort string
 
-	flag.StringVar(&SeedHost, "seed-host", "", "IP/Hostname of the seed node used to start monitoring the Group Replication cluster (Required Parameter!)")
-	flag.StringVar(&SeedPort, "seed-port", "3306", "Port of the seed node used to start monitoring the Group Replication cluster")
+	flag.StringVar(&seedHost, "seed-host", "", "IP/Hostname of the seed node used to start monitoring the Group Replication cluster (Required Parameter!)")
+	flag.StringVar(&seedPort, "seed-port", "3306", "Port of the seed node used to start monitoring the Group Replication cluster")
 	flag.BoolVar(&debug, "debug", false, "Execute in debug mode with all debug logging enabled")
 	flag.StringVar(&MySQLUser, "mysql-user", "root", "The mysql user account to be used when connecting to any node in the cluster")
 	flag.StringVar(&MySQLPass, "mysql-password", "", "The mysql user account password to be used when connecting to any node in the cluster")
@@ -127,8 +127,8 @@ func main() {
 	//       I need to do some data masking for the processlist
 
 	// A host is required, the default port of 3306 will then be attempted
-	if SeedHost == "" {
-		fmt.Fprintf(os.Stderr, "No value specified for required flag: -SeedHost\n")
+	if seedHost == "" {
+		fmt.Fprintf(os.Stderr, "No value specified for required flag: -seedHost\n")
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
 		flag.PrintDefaults()
 		os.Exit(1)
@@ -175,8 +175,8 @@ func main() {
 
 	InfoLog.Println("Welcome to the MySQL Group Replication Arbitrator!")
 
-	InfoLog.Printf("Starting operations from seed node: '%s:%s'\n", SeedHost, SeedPort)
-	seedNode := group.New(SeedHost, SeedPort, MySQLUser, MySQLPass)
+	InfoLog.Printf("Starting operations from seed node: '%s:%s'\n", seedHost, seedPort)
+	seedNode := group.New(seedHost, seedPort, MySQLUser, MySQLPass)
 	err := MonitorCluster(*seedNode)
 
 	if err != nil {
