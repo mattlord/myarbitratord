@@ -19,7 +19,7 @@ package group
 import (
 	"database/sql"
 	"errors"
-	"github.com/go-sql-driver/mysql"
+	//"github.com/go-sql-driver/mysql"
 	"log"
 	"os"
 	"strconv"
@@ -38,9 +38,9 @@ type Node struct {
 	ServerUuid         string `json:"Server UUID,omitempty"`
 	MemberState        string `json:"Member State,omitempty"`
 	OnlineParticipants uint8  `json:"Online Members,omitempty"`
-	Quorum          bool   `json:"Has Quorum,omitempty"`
+	Quorum             bool   `json:"Has Quorum,omitempty"`
 	ReadOnly           bool   `json:"Read Only,omitempty"`
-	db                  *sql.DB
+	db                 *sql.DB
 }
 
 // enable debug logging for all nodes

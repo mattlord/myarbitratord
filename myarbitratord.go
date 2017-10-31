@@ -30,7 +30,8 @@ import (
 	"time"
 	// uncomment the next import to add profiling to the binary, available via "/debug/pprof" in the RESTful API
 	//_ "net/http/pprof"
-	"github.com/mattlord/myarbitratord/replication/group"
+	//"github.com/mattlord/myarbitratord/replication/group"
+	"./replication/group"
 )
 
 type MembersByOnlineNodes []group.Node
@@ -48,9 +49,9 @@ var DebugLog = log.New(os.Stderr,
 // This is where I'll store all operating status metrics, presented as JSON via the "/stats" HTTP API call
 type stats struct {
 	StartTime   string       `json:"Started"`
-	Uptime       string       `json:"Uptime"`
-	Loops        uint         `json:"Loops"`
-	Partitions   uint         `json:"Partitions"`
+	Uptime      string       `json:"Uptime"`
+	Loops       uint         `json:"Loops"`
+	Partitions  uint         `json:"Partitions"`
 	CurrentSeed group.Node   `json:"Current Seed Node"`
 	LastView    []group.Node `json:"Last Membership View"`
 	sync.RWMutex
