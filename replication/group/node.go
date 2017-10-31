@@ -24,8 +24,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	
-	// "github.com/go-sql-driver/mysql"
+	// Anonymous import is required: http://go-database-sql.org/importing.html
+	_ "github.com/go-sql-driver/mysql"
 )
 
 // Node represents a mysqld process participating in a Group Replication cluster
