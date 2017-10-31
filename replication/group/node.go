@@ -27,7 +27,7 @@ import (
 	"sync"
 )
 
-// Node represents a mysqld process participating in a Group Replication cluster 
+// Node represents a mysqld process participating in a Group Replication cluster
 type Node struct {
 	MysqlHost string `json:"MySQL Host,omitempty"`
 	MysqlPort string `json:"MySQL Port,omitempty"`
