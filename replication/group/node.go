@@ -31,8 +31,8 @@ import (
 type Node struct {
 	Mysql_host string `json:"MySQL Host,omitempty"`
 	Mysql_port string `json:"MySQL Port,omitempty"`
-	Mysql_user string `json:"-"`
-	mysql_pass string `json:"-"`
+	Mysql_user string
+	mysql_pass string
 
 	// The status related vars can serve as an effective cache
 	Group_name          string `json:"Group Name,omitempty"`

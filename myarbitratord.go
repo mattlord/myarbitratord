@@ -72,7 +72,7 @@ func statsHandler(httpW http.ResponseWriter, httpR *http.Request) {
 	mystats.RLock()
 
 	if debug {
-		DebugLog.Printf("Handling HTTP request for stats. Current stats are: %+v\n", &mystats)
+		DebugLog.Printf("Handling HTTP request for stats.")
 	}
 
 	tval, terr := time.Parse(time.RFC1123, mystats.Start_time)
