@@ -27,6 +27,7 @@ import (
 	"sync"
 )
 
+// Node represents a mysqld process participating in a Group Replication cluster 
 type Node struct {
 	MysqlHost string `json:"MySQL Host,omitempty"`
 	MysqlPort string `json:"MySQL Port,omitempty"`
@@ -57,28 +58,28 @@ var dbcp map[string]*sql.DB = make(map[string]*sql.DB)
 // it can be accessed by multiple threads, so let's protect access to it
 var DbcpMutex sync.Mutex
 
-// Static query to get the group name (uuid)
+// GR_NAME_QUERY is a static query to get the group name (uuid)
 const GR_NAME_QUERY string = "SELECT variable_value FROM global_variables WHERE variable_name='group_replication_group_name'"
 
-// Static query to get the group status
+// GR_STATUS_QUERY is a static query to get the group status
 const GR_STATUS_QUERY string = "SELECT variable_value, member_state FROM global_variables gv INNER JOIN replication_group_members rgm ON(gv.variable_value=rgm.member_id) WHERE gv.variable_name='server_uuid'"
 
-// Static query to see if there is a primary partition with a quorum
+// GR_QUORUM_QUERY is a static query to see if there is a primary partition with a quorum
 const GR_QUORUM_QUERY string = "SELECT IF( MEMBER_STATE='ONLINE' AND ((SELECT COUNT(*) FROM replication_group_members WHERE MEMBER_STATE != 'ONLINE') >= ((SELECT COUNT(*) FROM replication_group_members)/2) = 0), 'true', 'false' ) FROM replication_group_members JOIN replication_group_member_stats USING(member_id)"
 
-// Static query to see if the node is READ ONLY
+// GR_RO_QUERY is a static query to see if the node is READ ONLY
 const GR_RO_QUERY string = "SELECT variable_value FROM global_variables WHERE variable_name='super_read_only'"
 
-// Static query to see if the node's GTID exected set
+// GR_GTID_QUERY is a static query to see if the node's GTID exected set
 const GR_GTID_QUERY string = "SELECT @@global.GTID_EXECUTED"
 
-// Static query to see the current group's members
+// GR_MEMBERS_QUERY is a static query to see the current group's members
 const GR_MEMBERS_QUERY string = "SELECT member_id, member_host, member_port, member_state FROM replication_group_members"
 
-// Static query to see what GTIDs are in the applier queue on a node
+// GR_GTID_SUBSET_QUERY is a static query to see what GTIDs are in the applier queue on a node
 const GR_GTID_SUBSET_QUERY string = "SELECT GTID_SUBTRACT( (SELECT Received_transaction_set FROM performance_schema.replication_connection_status WHERE Channel_name = 'group_replication_applier' ), (SELECT @@global.GTID_EXECUTED) )"
 
-// Static query to get the GCS address for the node
+// GR_GCSADDR_QUERY is a static query to get the GCS address for the node
 const GR_GCSADDR_QUERY string = "SELECT variable_value FROM global_variables WHERE variable_name='group_replication_local_address'"
 
 func New(myh string, myp string, myu string, mys string) *Node {
@@ -304,14 +305,14 @@ With the total transaction count for that set being: 2252719
 */
 func TransactionCount(GtidSet string) (uint64, error) {
 	var err error
-	var GtidCount uint64 = 0
+	var GtidCount uint64
 	NextDashPos := 0
 	NextColonPos := 0
 	NextCommaPos := 0
 	ColonPos := strings.IndexRune(GtidSet, ':')
-	var firstval uint64 = 0
-	var secondval uint64 = 0
-	var nextval uint64 = 0
+	var firstval uint64
+	var secondval uint64
+	var nextval uint64
 
 	if Debug {
 		DebugLog.Printf("Calculating total number of GTIDs from a set of: %s\n", GtidSet)
