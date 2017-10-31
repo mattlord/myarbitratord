@@ -19,12 +19,13 @@ package group
 import (
 	"database/sql"
 	"errors"
-	"github.com/go-sql-driver/mysql"
 	"log"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
+	
+	// "github.com/go-sql-driver/mysql"
 )
 
 // Node represents a mysqld process participating in a Group Replication cluster
