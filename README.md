@@ -9,17 +9,17 @@ This deamon will attempt to automatically handle network partitions of various k
 Usage of myarbitratord:
   -debug
     	Execute in debug mode with all debug logging enabled
-  -http_port string
+  -http-port string
     	The HTTP port used for the RESTful API (default "8099")
-  -mysql_auth_file string
+  -mysql-auth-file string
     	The JSON encoded file containining user and password entities for the mysql account to be used when connecting to any node in the cluster
-  -mysql_password string
+  -mysql-password string
     	The mysql user account password to be used when connecting to any node in the cluster
-  -mysql_user string
+  -mysql-user string
     	The mysql user account to be used when connecting to any node in the cluster (default "root")
-  -seed_host string
+  -seed-host string
     	IP/Hostname of the seed node used to start monitoring the Group Replication cluster (Required Parameter!)
-  -seed_port string
+  -seed-port string
     	Port of the seed node used to start monitoring the Group Replication cluster (default "3306")
 ```
 
@@ -32,7 +32,7 @@ You're a DBA that is tasked with monitoring a Group Replication cluster and ensu
 The deamon performs two functions, both done in distinct threads:    
 **A.** The RESTful API thread simply provides runtime information on the monitored Group Replication cluster and the myarbitratord operations. See [the API docs](#available-restful-api-calls-with-example-output).
 
-**B.** The main thread connects to a Group Replication cluster using the seed node information specified on the command-line via the -seed_host and -seed_port flags. The thread then loops and performs the following actions:    
+**B.** The main thread connects to a Group Replication cluster using the seed node information specified on the command-line via the -seed-host and -seed-port flags. The thread then loops and performs the following actions:    
   1. If we see that the previous seed node is no longer reachable or valid, then we'll attempt to get a new seed node from the last known membership view. We don't give up attempting to find a seed node from the last known list of cluster participants.    
   2. If we see that any nodes which were previously in the group aren't any more:
    * If it's because they were isolated or encountered an error: then we try and shut them down. This helps to prevent (very) dirty reads and lost writes.     
@@ -70,7 +70,7 @@ Specifying the MySQL credentials on the command-line is insecure as the password
 
 ## Example
 ```
-gonzo:myarbitratord matt$ $GOBIN/myarbitratord -seed_host="hanode3" -mysql_auth_file="/Users/matt/.my.json"
+gonzo:myarbitratord matt$ $GOBIN/myarbitratord -seed-host="hanode3" -mysql-auth-file="/Users/matt/.my.json"
 INFO: 2017/02/18 13:22:34 myarbitratord.go:138: Starting HTTP server for RESTful API on port 8099
 INFO: 2017/02/18 13:22:34 myarbitratord.go:176: Welcome to the MySQL Group Replication Arbitrator!
 INFO: 2017/02/18 13:22:34 myarbitratord.go:178: Starting operations from seed node: 'hanode3:3306'

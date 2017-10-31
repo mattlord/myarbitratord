@@ -350,8 +350,8 @@ func MonitorCluster(SeedNode group.Node) error {
 				// can be 1 node) that has executed the most GTIDs
 				if ViewLen >= 1 && LastView[ViewLen].OnlineParticipants == LastView[ViewLen-1].OnlineParticipants {
 					bestmemberpos := ViewLen
-					var bestmembertrxcnt uint64 = 0
-					var curtrxcnt uint64 = 0
+					var bestmembertrxcnt uint64
+					var curtrxcnt uint64
 					bestmembertrxcnt, err = LastView[ViewLen].TransactionsExecutedCount()
 
 					// let's loop backwards through the array as it's sorted by online participants / partition size now
