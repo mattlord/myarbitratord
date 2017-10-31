@@ -19,7 +19,7 @@ package group
 import (
 	"database/sql"
 	"errors"
-	//"github.com/go-sql-driver/mysql"
+	"github.com/go-sql-driver/mysql"
 	"log"
 	"os"
 	"strconv"

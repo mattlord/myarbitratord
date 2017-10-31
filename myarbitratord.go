@@ -30,8 +30,7 @@ import (
 	"time"
 	// uncomment the next import to add profiling to the binary, available via "/debug/pprof" in the RESTful API
 	//_ "net/http/pprof"
-	//"github.com/mattlord/myarbitratord/replication/group"
-	"./replication/group"
+	"github.com/mattlord/myarbitratord/replication/group"
 )
 
 type MembersByOnlineNodes []group.Node
