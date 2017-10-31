@@ -19,7 +19,7 @@ package group
 import (
 	"database/sql"
 	"errors"
-	_ "github.com/go-sql-driver/mysql"
+	"github.com/go-sql-driver/mysql"
 	"log"
 	"os"
 	"strconv"
@@ -27,20 +27,19 @@ import (
 	"sync"
 )
 
-// member variables that start with capital letters are public/exported
 type Node struct {
-	Mysql_host string `json:"MySQL Host,omitempty"`
-	Mysql_port string `json:"MySQL Port,omitempty"`
-	Mysql_user string
-	mysql_pass string
+	MysqlHost string `json:"MySQL Host,omitempty"`
+	MysqlPort string `json:"MySQL Port,omitempty"`
+	MysqlUser string `json:"MySQL User"`
+	mysqlPass string
 
 	// The status related vars can serve as an effective cache
-	Group_name          string `json:"Group Name,omitempty"`
-	Server_uuid         string `json:"Server UUID,omitempty"`
-	Member_state        string `json:"Member State,omitempty"`
-	Online_participants uint8  `json:"Online Members,omitempty"`
-	Has_quorum          bool   `json:"Has Quorum,omitempty"`
-	Read_only           bool   `json:"Read Only,omitempty"`
+	GroupName          string `json:"Group Name,omitempty"`
+	ServerUuid         string `json:"Server UUID,omitempty"`
+	MemberState        string `json:"Member State,omitempty"`
+	OnlineParticipants uint8  `json:"Online Members,omitempty"`
+	Quorum          bool   `json:"Has Quorum,omitempty"`
+	ReadOnly           bool   `json:"Read Only,omitempty"`
 	db                  *sql.DB
 }
 
@@ -56,68 +55,83 @@ var DebugLog = log.New(os.Stderr,
 var dbcp map[string]*sql.DB = make(map[string]*sql.DB)
 
 // it can be accessed by multiple threads, so let's protect access to it
-var dbcp_mutex sync.Mutex
+var DbcpMutex sync.Mutex
 
+// Static query to get the group name (uuid)
 const GR_NAME_QUERY string = "SELECT variable_value FROM global_variables WHERE variable_name='group_replication_group_name'"
+
+// Static query to get the group status
 const GR_STATUS_QUERY string = "SELECT variable_value, member_state FROM global_variables gv INNER JOIN replication_group_members rgm ON(gv.variable_value=rgm.member_id) WHERE gv.variable_name='server_uuid'"
+
+// Static query to see if there is a primary partition with a quorum
 const GR_QUORUM_QUERY string = "SELECT IF( MEMBER_STATE='ONLINE' AND ((SELECT COUNT(*) FROM replication_group_members WHERE MEMBER_STATE != 'ONLINE') >= ((SELECT COUNT(*) FROM replication_group_members)/2) = 0), 'true', 'false' ) FROM replication_group_members JOIN replication_group_member_stats USING(member_id)"
+
+// Static query to see if the node is READ ONLY
 const GR_RO_QUERY string = "SELECT variable_value FROM global_variables WHERE variable_name='super_read_only'"
+
+// Static query to see if the node's GTID exected set
 const GR_GTID_QUERY string = "SELECT @@global.GTID_EXECUTED"
+
+// Static query to see the current group's members
 const GR_MEMBERS_QUERY string = "SELECT member_id, member_host, member_port, member_state FROM replication_group_members"
+
+// Static query to see what GTIDs are in the applier queue on a node
 const GR_GTID_SUBSET_QUERY string = "SELECT GTID_SUBTRACT( (SELECT Received_transaction_set FROM performance_schema.replication_connection_status WHERE Channel_name = 'group_replication_applier' ), (SELECT @@global.GTID_EXECUTED) )"
+
+// Static query to get the GCS address for the node
 const GR_GCSADDR_QUERY string = "SELECT variable_value FROM global_variables WHERE variable_name='group_replication_local_address'"
 
 func New(myh string, myp string, myu string, mys string) *Node {
-	return &Node{Mysql_host: myh, Mysql_port: myp, Mysql_user: myu, mysql_pass: mys}
+	return &Node{MysqlHost: myh, MysqlPort: myp, MysqlUser: myu, mysqlPass: mys}
 }
 
 func (me *Node) Connect() error {
 	var err error
 
-	if me.Mysql_host == "" || me.Mysql_port == "" {
+	if me.MysqlHost == "" || me.MysqlPort == "" {
 		err = errors.New("No MySQL endpoint specified!")
 	} else {
 		if me.db == nil {
-			conn_string := me.Mysql_user + ":" + me.mysql_pass + "@tcp(" + me.Mysql_host + ":" + me.Mysql_port + ")/performance_schema"
+			ConnString := me.MysqlUser + ":" + me.mysqlPass + "@tcp(" + me.MysqlHost + ":" + me.MysqlPort + ")/performance_schema"
 
-			dbcp_mutex.Lock()
+			DbcpMutex.Lock()
 
-			if dbcp[conn_string] == nil {
+			if dbcp[ConnString] == nil {
 				if Debug {
-					DebugLog.Printf("Making SQL connection and adding it to the pool using: %s\n", conn_string)
+					DebugLog.Printf("Making SQL connection and adding it to the pool using: %s\n", ConnString)
 				}
 
-				dbcp[conn_string], err = sql.Open("mysql", conn_string)
+				dbcp[ConnString], err = sql.Open("mysql", ConnString)
 			}
 
 			if err != nil {
 				DebugLog.Printf("Error during sql.Open: %v", err)
 			} else {
-				me.db = dbcp[conn_string]
+				me.db = dbcp[ConnString]
 			}
 
-			dbcp_mutex.Unlock()
+			DbcpMutex.Unlock()
 		}
 
 		err = me.db.Ping()
 
 		if err == nil {
 			if Debug {
-				DebugLog.Printf("Checking group name on '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, GR_NAME_QUERY)
+				DebugLog.Printf("Checking group name on '%s:%s'. Query: %s\n", me.MysqlHost, me.MysqlPort, GR_NAME_QUERY)
 			}
 
-			err = me.db.QueryRow(GR_NAME_QUERY).Scan(&me.Group_name)
+			err = me.db.QueryRow(GR_NAME_QUERY).Scan(&me.GroupName)
 
 			if err != nil {
 				// let's just return the error
-			} else if me.Group_name == "" {
+			} else if me.GroupName == "" {
 				err = errors.New("Specified MySQL Node is not a member of any Group Replication cluster!")
 			} else {
 				if Debug {
-					DebugLog.Printf("Checking status of '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, GR_STATUS_QUERY)
+					DebugLog.Printf("Checking status of '%s:%s'. Query: %s\n", me.MysqlHost, me.MysqlPort, GR_STATUS_QUERY)
 				}
 
-				err = me.db.QueryRow(GR_STATUS_QUERY).Scan(&me.Server_uuid, &me.Member_state)
+				err = me.db.QueryRow(GR_STATUS_QUERY).Scan(&me.ServerUuid, &me.MemberState)
 			}
 		}
 	}
@@ -127,35 +141,35 @@ func (me *Node) Connect() error {
 
 func (me *Node) HasQuorum() (bool, error) {
 	if Debug {
-		DebugLog.Printf("Checking if '%s:%s' has a quorum. Query: %s\n", me.Mysql_host, me.Mysql_port, GR_QUORUM_QUERY)
+		DebugLog.Printf("Checking if '%s:%s' has a quorum. Query: %s\n", me.MysqlHost, me.MysqlPort, GR_QUORUM_QUERY)
 	}
 
 	err := me.db.Ping()
 
 	if err == nil {
-		err = me.db.QueryRow(GR_QUORUM_QUERY).Scan(&me.Has_quorum)
+		err = me.db.QueryRow(GR_QUORUM_QUERY).Scan(&me.Quorum)
 	}
 
-	return me.Has_quorum, err
+	return me.Quorum, err
 }
 
 func (me *Node) MemberStatus() (string, error) {
 	if Debug {
-		DebugLog.Printf("Checking member status of '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, GR_STATUS_QUERY)
+		DebugLog.Printf("Checking member status of '%s:%s'. Query: %s\n", me.MysqlHost, me.MysqlPort, GR_STATUS_QUERY)
 	}
 
 	err := me.db.Ping()
 
 	if err == nil {
-		err = me.db.QueryRow(GR_STATUS_QUERY).Scan(&me.Member_state)
+		err = me.db.QueryRow(GR_STATUS_QUERY).Scan(&me.MemberState)
 	}
 
-	return me.Member_state, err
+	return me.MemberState, err
 }
 
 func (me *Node) IsReadOnly() (bool, error) {
 	if Debug {
-		DebugLog.Printf("Checking if '%s:%s' is read only. Query: %s\n", me.Mysql_host, me.Mysql_port, GR_RO_QUERY)
+		DebugLog.Printf("Checking if '%s:%s' is read only. Query: %s\n", me.MysqlHost, me.MysqlPort, GR_RO_QUERY)
 	}
 
 	err := me.db.Ping()
@@ -165,21 +179,21 @@ func (me *Node) IsReadOnly() (bool, error) {
 		err = me.db.QueryRow(GR_RO_QUERY).Scan(&tmpval)
 
 		if tmpval == "ON" {
-			me.Read_only = true
+			me.ReadOnly = true
 		} else {
-			me.Read_only = false
+			me.ReadOnly = false
 		}
 	}
 
-	return me.Read_only, err
+	return me.ReadOnly, err
 }
 
 func (me *Node) GetMembers() ([]Node, error) {
-	member_slice := make([]Node, 0, 3)
-	me.Online_participants = 0
+	MemberSlice := make([]Node, 0, 3)
+	me.OnlineParticipants = 0
 
 	if Debug {
-		DebugLog.Printf("Getting group members from '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, GR_MEMBERS_QUERY)
+		DebugLog.Printf("Getting group members from '%s:%s'. Query: %s\n", me.MysqlHost, me.MysqlPort, GR_MEMBERS_QUERY)
 	}
 
 	err := me.db.Ping()
@@ -191,38 +205,38 @@ func (me *Node) GetMembers() ([]Node, error) {
 			defer rows.Close()
 
 			for rows.Next() {
-				member := New("", "", me.Mysql_user, me.mysql_pass)
-				err = rows.Scan(&member.Server_uuid, &member.Mysql_host, &member.Mysql_port, &member.Member_state)
+				member := New("", "", me.MysqlUser, me.mysqlPass)
+				err = rows.Scan(&member.ServerUuid, &member.MysqlHost, &member.MysqlPort, &member.MemberState)
 				if err == nil {
-					if member.Member_state == "ONLINE" {
-						me.Online_participants++
+					if member.MemberState == "ONLINE" {
+						me.OnlineParticipants++
 					}
-					member_slice = append(member_slice, *member)
+					MemberSlice = append(MemberSlice, *member)
 				}
 			}
 
 			rows.Close()
 
 			if Debug {
-				DebugLog.Printf("Group member info found for '%s:%s' -- ONLINE member count: %d, Members: %+v\n", me.Mysql_host, me.Mysql_port, me.Online_participants, member_slice)
+				DebugLog.Printf("Group member info found for '%s:%s' -- ONLINE member count: %d, Members: %+v\n", me.MysqlHost, me.MysqlPort, me.OnlineParticipants, MemberSlice)
 			}
 		}
 	}
 
-	return member_slice, err
+	return MemberSlice, err
 }
 
 func (me *Node) Shutdown() error {
-	shutdown_query := "SHUTDOWN"
+	ShutdownQuery := "SHUTDOWN"
 
 	if Debug {
-		DebugLog.Printf("Shutting down node '%s:%s'\n", me.Mysql_host, me.Mysql_port)
+		DebugLog.Printf("Shutting down node '%s:%s'\n", me.MysqlHost, me.MysqlPort)
 	}
 
 	err := me.db.Ping()
 
 	if err == nil {
-		_, err = me.db.Exec(shutdown_query)
+		_, err = me.db.Exec(ShutdownQuery)
 	}
 
 	return err
@@ -233,7 +247,7 @@ func (me *Node) TransactionsExecuted() (string, error) {
 	var gtids string
 
 	if Debug {
-		DebugLog.Printf("Getting the transactions executed on '%s:%s'\n", me.Mysql_host, me.Mysql_port)
+		DebugLog.Printf("Getting the transactions executed on '%s:%s'\n", me.MysqlHost, me.MysqlPort)
 	}
 
 	err := me.db.Ping()
@@ -247,13 +261,13 @@ func (me *Node) TransactionsExecuted() (string, error) {
 
 func (me *Node) TransactionsExecutedCount() (uint64, error) {
 	var err error
-	var gtid_set string
+	var GtidSet string
 	var cnt uint64
 
-	gtid_set, err = me.TransactionsExecuted()
+	GtidSet, err = me.TransactionsExecuted()
 
 	if err != nil {
-		cnt, err = TransactionCount(gtid_set)
+		cnt, err = TransactionCount(GtidSet)
 	}
 
 	return cnt, err
@@ -262,19 +276,19 @@ func (me *Node) TransactionsExecutedCount() (uint64, error) {
 func (me *Node) ApplierQueueLength() (uint64, error) {
 	// since this is such a fast changing metric, I won't cache the value in the struct
 	var qlen uint64
-	var gtid_subset string
+	var GtidSubset string
 
 	if Debug {
-		DebugLog.Printf("Getting the applier queue length on '%s:%s'\n", me.Mysql_host, me.Mysql_port)
+		DebugLog.Printf("Getting the applier queue length on '%s:%s'\n", me.MysqlHost, me.MysqlPort)
 	}
 
 	err := me.db.Ping()
 
 	if err == nil {
-		err = me.db.QueryRow(GR_GTID_SUBSET_QUERY).Scan(&gtid_subset)
+		err = me.db.QueryRow(GR_GTID_SUBSET_QUERY).Scan(&GtidSubset)
 	}
 
-	qlen, err = TransactionCount(gtid_subset)
+	qlen, err = TransactionCount(GtidSubset)
 
 	return qlen, err
 }
@@ -288,54 +302,54 @@ func (me *Node) ApplierQueueLength() (uint64, error) {
 de6858e8-0669-4b82-a188-d2906daa6d91:1-119927"
 With the total transaction count for that set being: 2252719
 */
-func TransactionCount(gtid_set string) (uint64, error) {
+func TransactionCount(GtidSet string) (uint64, error) {
 	var err error
-	var gtid_count uint64 = 0
-	next_dash_pos := 0
-	next_colon_pos := 0
-	next_comma_pos := 0
-	colon_pos := strings.IndexRune(gtid_set, ':')
+	var GtidCount uint64 = 0
+	NextDashPos := 0
+	NextColonPos := 0
+	NextCommaPos := 0
+	ColonPos := strings.IndexRune(GtidSet, ':')
 	var firstval uint64 = 0
 	var secondval uint64 = 0
 	var nextval uint64 = 0
 
 	if Debug {
-		DebugLog.Printf("Calculating total number of GTIDs from a set of: %s\n", gtid_set)
+		DebugLog.Printf("Calculating total number of GTIDs from a set of: %s\n", GtidSet)
 	}
 
-	for colon_pos != -1 {
+	for ColonPos != -1 {
 		// lets get rid of everything before the current colon, and the colon itself, as it's UUID info that we don't care about
-		gtid_set = gtid_set[colon_pos+1:]
+		GtidSet = GtidSet[ColonPos+1:]
 
-		next_dash_pos = strings.IndexRune(gtid_set, '-')
-		next_colon_pos = strings.IndexRune(gtid_set, ':')
-		next_comma_pos = strings.IndexRune(gtid_set, ',')
+		NextDashPos = strings.IndexRune(GtidSet, '-')
+		NextColonPos = strings.IndexRune(GtidSet, ':')
+		NextCommaPos = strings.IndexRune(GtidSet, ',')
 
 		firstval = 0
 		secondval = 0
 		nextval = 0
 
-		if next_dash_pos < next_colon_pos && next_dash_pos < next_comma_pos {
-			if next_colon_pos < next_comma_pos {
-				firstval, err = strconv.ParseUint(gtid_set[:next_dash_pos], 10, 64)
-				secondval, err = strconv.ParseUint(gtid_set[next_dash_pos+1:next_colon_pos], 10, 64)
+		if NextDashPos < NextColonPos && NextDashPos < NextCommaPos {
+			if NextColonPos < NextCommaPos {
+				firstval, err = strconv.ParseUint(GtidSet[:NextDashPos], 10, 64)
+				secondval, err = strconv.ParseUint(GtidSet[NextDashPos+1:NextColonPos], 10, 64)
 
 				// the first GTID counts too
 				firstval = firstval - 1
 
 				nextval = secondval - firstval
 			} else {
-				firstval, err = strconv.ParseUint(gtid_set[:next_dash_pos], 10, 64)
-				secondval, err = strconv.ParseUint(gtid_set[next_dash_pos+1:next_comma_pos], 10, 64)
+				firstval, err = strconv.ParseUint(GtidSet[:NextDashPos], 10, 64)
+				secondval, err = strconv.ParseUint(GtidSet[NextDashPos+1:NextCommaPos], 10, 64)
 
 				// the first GTID counts too
 				firstval = firstval - 1
 
 				nextval = secondval - firstval
 			}
-		} else if next_colon_pos == -1 && next_dash_pos != -1 {
-			firstval, err = strconv.ParseUint(gtid_set[:next_dash_pos], 10, 64)
-			secondval, err = strconv.ParseUint(gtid_set[next_dash_pos+1:], 10, 64)
+		} else if NextColonPos == -1 && NextDashPos != -1 {
+			firstval, err = strconv.ParseUint(GtidSet[:NextDashPos], 10, 64)
+			secondval, err = strconv.ParseUint(GtidSet[NextDashPos+1:], 10, 64)
 
 			// the first GTID counts too
 			firstval = firstval - 1
@@ -351,26 +365,26 @@ func TransactionCount(gtid_set string) (uint64, error) {
 
 		if Debug {
 			DebugLog.Printf("The current calculation is: (%d - %d)\n", secondval, firstval)
-			DebugLog.Printf("Current total: %d, adding %d\n", gtid_count, nextval)
+			DebugLog.Printf("Current total: %d, adding %d\n", GtidCount, nextval)
 		}
 
-		gtid_count = gtid_count + nextval
+		GtidCount = GtidCount + nextval
 
-		colon_pos = strings.IndexRune(gtid_set, ':')
+		ColonPos = strings.IndexRune(GtidSet, ':')
 
 		if Debug {
-			DebugLog.Printf("Remaining unprocessed GTID string: %s\n", gtid_set)
+			DebugLog.Printf("Remaining unprocessed GTID string: %s\n", GtidSet)
 		}
 	}
 
-	return gtid_count, err
+	return GtidCount, err
 }
 
 func (me *Node) GetGCSAddress() (string, error) {
 	var gcsaddr string
 
 	if Debug {
-		DebugLog.Printf("Getting GCS endpoint for '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, GR_GCSADDR_QUERY)
+		DebugLog.Printf("Getting GCS endpoint for '%s:%s'. Query: %s\n", me.MysqlHost, me.MysqlPort, GR_GCSADDR_QUERY)
 	}
 
 	err := me.db.Ping()
@@ -383,16 +397,16 @@ func (me *Node) GetGCSAddress() (string, error) {
 }
 
 func (me *Node) ForceMembers(fms string) error {
-	force_membership_query := "SET GLOBAL group_replication_force_members='" + fms + "'"
+	ForceMembershipQuery := "SET GLOBAL group_replication_force_members='" + fms + "'"
 
 	if Debug {
-		DebugLog.Printf("Forcing group membership on '%s:%s'. Query: %s\n", me.Mysql_host, me.Mysql_port, force_membership_query)
+		DebugLog.Printf("Forcing group membership on '%s:%s'. Query: %s\n", me.MysqlHost, me.MysqlPort, ForceMembershipQuery)
 	}
 
 	err := me.db.Ping()
 
 	if err == nil {
-		_, err = me.db.Exec(force_membership_query)
+		_, err = me.db.Exec(ForceMembershipQuery)
 	}
 
 	// now that we've forced the membership, let's reset the global variable (otherwise it will cause complications later)
@@ -404,45 +418,45 @@ func (me *Node) ForceMembers(fms string) error {
 }
 
 func (me *Node) SetReadOnly(ro bool) error {
-	ro_query := "SET GLOBAL super_read_only="
+	RoQuery := "SET GLOBAL super_read_only="
 
 	if ro {
-		ro_query = ro_query + "ON"
+		RoQuery = RoQuery + "ON"
 	} else {
-		ro_query = ro_query + "OFF"
+		RoQuery = RoQuery + "OFF"
 	}
 
 	if Debug {
-		DebugLog.Printf("Setting read_only mode to %t on '%s:%s'\n", ro, me.Mysql_host, me.Mysql_port)
+		DebugLog.Printf("Setting read_only mode to %t on '%s:%s'\n", ro, me.MysqlHost, me.MysqlPort)
 	}
 
 	err := me.db.Ping()
 
 	if err == nil {
-		_, err = me.db.Exec(ro_query)
-		me.Read_only = ro
+		_, err = me.db.Exec(RoQuery)
+		me.ReadOnly = ro
 	}
 
 	return err
 }
 
 func (me *Node) SetOfflineMode(om bool) error {
-	om_query := "SET GLOBAL offline_mode="
+	OmQuery := "SET GLOBAL offline_mode="
 
 	if om {
-		om_query = om_query + "ON"
+		OmQuery = OmQuery + "ON"
 	} else {
-		om_query = om_query + "OFF"
+		OmQuery = OmQuery + "OFF"
 	}
 
 	if Debug {
-		DebugLog.Printf("Setting offline mode to %t on '%s:%s'\n", om, me.Mysql_host, me.Mysql_port)
+		DebugLog.Printf("Setting offline mode to %t on '%s:%s'\n", om, me.MysqlHost, me.MysqlPort)
 	}
 
 	err := me.db.Ping()
 
 	if err == nil {
-		_, err = me.db.Exec(om_query)
+		_, err = me.db.Exec(OmQuery)
 	}
 
 	return err
@@ -452,7 +466,7 @@ func (me *Node) Cleanup() error {
 	var err error = nil
 
 	if Debug {
-		DebugLog.Printf("Cleaning up Node object for '%s:%s'\n", me.Mysql_host, me.Mysql_port)
+		DebugLog.Printf("Cleaning up Node object for '%s:%s'\n", me.MysqlHost, me.MysqlPort)
 	}
 
 	// We don't want to close this anymore as it's a pointer to a connection in our pool now
@@ -469,18 +483,18 @@ func (me *Node) Reset() {
 	_ = me.Cleanup()
 
 	if Debug {
-		DebugLog.Printf("Resetting Node object for '%s:%s'\n", me.Mysql_host, me.Mysql_port)
+		DebugLog.Printf("Resetting Node object for '%s:%s'\n", me.MysqlHost, me.MysqlPort)
 	}
 
-	me.Mysql_host = ""
-	me.Mysql_port = ""
-	me.Mysql_user = ""
-	me.mysql_pass = ""
-	me.Group_name = ""
-	me.Server_uuid = ""
-	me.Member_state = ""
-	me.Online_participants = 0
-	me.Has_quorum = false
-	me.Read_only = false
+	me.MysqlHost = ""
+	me.MysqlPort = ""
+	me.MysqlUser = ""
+	me.mysqlPass = ""
+	me.GroupName = ""
+	me.ServerUuid = ""
+	me.MemberState = ""
+	me.OnlineParticipants = 0
+	me.Quorum = false
+	me.ReadOnly = false
 	me.db = nil
 }
