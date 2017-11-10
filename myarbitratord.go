@@ -389,7 +389,7 @@ func MonitorCluster(seedNode group.Node) error {
 				members, _ := seedNode.GetMembers()
 
 				forceMemberString := ""
-				var memberGcsAddr string
+				var memberGCSAddr string
 
 				for _, member := range members {
 					err = member.Connect()
@@ -401,10 +401,10 @@ func MonitorCluster(seedNode group.Node) error {
 						}
 
 						// we need to get the GCS/XCom 'host:port' combination, which is different from the 'host:port' combination for mysqld
-						memberGcsAddr, err = member.GetGCSAddress()
+						memberGCSAddr, err = member.GetGCSAddress()
 
 						if err == nil {
-							forceMemberString = forceMemberString + memberGcsAddr
+							forceMemberString = forceMemberString + memberGCSAddr
 						} else {
 							InfoLog.Printf("Problem getting GCS endpoint for '%s:%s': %+v\n", member.MySQLHost, member.MySQLPort, err)
 						}
