@@ -41,7 +41,7 @@ The deamon performs two functions, both done in distinct threads:
    * If a partition has more online members, then this will be the new primary partition    
    * If there's no clear winner based on partition size, then we will pick the partition that has the largest GTID set 
 
-Note: In order for the arbitrator to work reliably in all cases, it should have multiple network paths to each node to ensure that if *any human or process* can communicate with a given node over the network, that the arbitrator can as well. 
+> In order for the arbitrator to work reliably in all cases, it should have multiple network paths to each node to ensure that if *any human or process* can communicate with a given node over the network, that the arbitrator can as well. 
 
 
 ## Installation
@@ -65,7 +65,7 @@ Specifying the MySQL credentials on the command-line is insecure as the password
 }
 ```
 
-**Note:** _The RESTful API currently has no authentication mechanism_
+> _The RESTful API currently has no authentication mechanism_
 
 
 ## Example
